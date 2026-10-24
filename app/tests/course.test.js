@@ -5,14 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadCourse, validateCourse, flatten } from '../server/content.js';
-import { runJsTests } from '../client/src/grader/js-sandbox.js';
 import { summarize } from '../client/src/grader/grading.js';
-
-// A starter may throw inside a timer callback, as it would in the browser.
-// The browser worker records those errors; here the process does.
-const uncaught = [];
-process.on('uncaughtException', (err) => uncaught.push(`${err.name}: ${err.message}`));
-process.on('unhandledRejection', (err) => uncaught.push(String(err)));
+import { runJsInWorker } from './helpers/run-js.js';
 
 const tracks = await loadCourse();
 const lessons = flatten(tracks).map((entry) => entry.lesson);
@@ -41,12 +35,12 @@ test('check functions only use their argument', () => {
 
 for (const lesson of jsLessons) {
   test(`${lesson.id}: the solution scores 10/10`, async () => {
-    const graded = summarize(lesson.checks, await runJsTests(lesson.solution, lesson.checks, lesson, { uncaught }));
+    const graded = summarize(lesson.checks, await runJsInWorker(lesson.solution, lesson.checks, lesson));
     assert.equal(graded.score, 10, graded.mistakes.join(' | '));
   });
 
   test(`${lesson.id}: the starter does not already pass`, async () => {
-    const graded = summarize(lesson.checks, await runJsTests(lesson.starter, lesson.checks, lesson, { uncaught }));
+    const graded = summarize(lesson.checks, await runJsInWorker(lesson.starter, lesson.checks, lesson));
     assert.ok(graded.score < 10, `starter scores ${graded.score}`);
   });
 }
