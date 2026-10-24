@@ -11,10 +11,11 @@ import architecture from './10-architecture.js';
 import quality from './11-quality.js';
 import projects from './12-projects.js';
 import capstone from './13-capstone.js';
+import final from './14-final.js';
 
 export default {
   id: 'react',
   title: 'React',
   description: 'Building interfaces from components: JSX, props, state, events, forms, effects, data fetching, hooks, context, reducers, routing and app architecture.',
-  modules: [introJsx, componentsProps, state, eventsForms, effects, data, hooks, customHooks, routing, architecture, quality, projects, capstone],
+  modules: [introJsx, componentsProps, state, eventsForms, effects, data, hooks, customHooks, routing, architecture, quality, projects, capstone, final],
 };
