@@ -1,0 +1,137 @@
+// HTML & CSS course, Parts 15–17: the cascade, colours, units.
+export default {
+  id: 'css-cascade',
+  title: 'Cascade, colour and units',
+  lessons: [
+    {
+      id: 'css-specificity',
+      title: 'The cascade and specificity, precisely',
+      source: 'HTML & CSS course, Part 15',
+      runner: 'quiz',
+      teach: [
+        'When several declarations set the same property on the same element, the cascade picks one, checking in order and only moving on when tied:',
+        { ol: ['**Origin and importance**: browser defaults < your styles; `!important` jumps above normal declarations; inline `style` beats stylesheets.', '**Cascade layers** (`@layer`): later layers win, whatever the specificity. Un-layered styles beat all layers.', '**Specificity**.', '**Source order**: the later declaration wins.'] },
+        { h: 'Specificity is a tuple, not a sum' },
+        { code: '(inline, IDs, classes/attributes/pseudo-classes, elements/pseudo-elements)\n\np                    (0,0,0,1)\n.card p              (0,0,1,1)\n#main .card p        (0,1,1,1)\n.a.b.c.d.e           (0,0,5,0)   still loses to\n#x                   (0,1,0,0)\nstyle="…"            (1,0,0,0)', lang: 'text' },
+        'Compare column by column from the left; the first difference decides. One ID beats any number of classes. `*` and combinators add nothing.',
+        { list: ['`:is(.card, #sidebar) p` takes its **most specific** argument: (0,1,0,1).', '`:where(…)` always adds **zero**: `:where(.card, #sidebar) p` is just (0,0,0,1).', '`:not(.x)` adds its argument: `p:not(.x)` is (0,0,1,1).'] },
+        { warn: '`!important` fixes the symptom and starts an arms race: the only way to beat it is another `!important`. Find the real specificity problem in DevTools (look for the struck-through declaration) instead.' },
+        { h: 'Inheritance' },
+        'Text properties inherit (`color`, `font-*`, `line-height`, `text-align`, `letter-spacing`); box and layout properties do not (`margin`, `padding`, `border`, `width`, `background`, `display`). Control it with `inherit`, `initial` (the spec default), `unset` (inherit if inheritable, else initial), `revert` (back to the browser default) and `all: unset`.',
+      ],
+      example: [
+        { code: '@layer reset, base, components, utilities;\n@layer utilities { .text-center { text-align: center; } }   /* beats any selector in components */', lang: 'css' },
+      ],
+      task: ['Answer every question.'],
+      questions: [
+        { q: 'Specificity of `#sidebar .card p`?', options: ['(0,0,2,1)', '(0,1,1,1)', '(0,1,2,0)', '(1,1,1,1)'], answer: 1, explain: 'One ID, one class, one element.' },
+        { q: '`.nav .link { color: blue }` and `#header a { color: red }` both match a link. Colour?', options: ['blue: two classes', 'red: one ID beats any number of classes', 'whichever is later', 'purple'], answer: 1, explain: '(0,1,0,1) beats (0,0,2,0) in the ID column.' },
+        { q: '`#main p { color: black }` vs `.content p { color: teal !important }`:', options: ['black', 'teal', 'depends on order', 'neither'], answer: 1, explain: 'Importance is checked before specificity.' },
+        { q: '`.card p { color: navy }` comes first; `p { color: red }` comes later. Colour?', options: ['red, it is later', 'navy, specificity is checked before source order', 'both', 'black'], answer: 1, explain: 'Source order only breaks specificity ties.' },
+        { q: 'Specificity of `:where(#nav, .menu) a`?', options: ['(0,1,0,1)', '(0,0,1,1)', '(0,0,0,1)', '(0,0,0,0)'], answer: 2, explain: ':where adds nothing; only the a counts.' },
+        { q: 'A `.card` has `border: 1px solid gray; color: #222`. Its child paragraph gets…', options: ['both', 'the colour only', 'the border only', 'neither'], answer: 1, explain: 'color inherits; border does not.' },
+        { q: 'Un-layered styles versus styles in a named `@layer`:', options: ['Layers always win', 'Un-layered styles win', 'Specificity decides', 'Source order decides'], answer: 1, explain: 'Un-layered author styles form an implicit last layer.' },
+        { q: '`all: unset` on a button…', options: ['Deletes it', 'Resets every property: inheritable ones inherit, others go to initial', 'Restores browser defaults', 'Only clears colours'], answer: 1, explain: 'A clean slate for a custom-styled control.' },
+      ],
+    },
+    {
+      id: 'css-cascade-lab',
+      title: 'Winning the cascade without !important',
+      source: 'HTML & CSS course, Part 15',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<main id="main">\n  <div class="card">\n    <p class="intro">Intro paragraph.</p>\n    <p>Body paragraph with <a href="#more">a link</a>.</p>\n    <p class="tight">Tight paragraph.</p>\n  </div>\n</main>\n<nav id="header"><a class="nav-link" href="#home">Home</a></nav>\n<button class="btn" id="special">Order now</button>',
+        css: '/* a "library" stylesheet you cannot edit */\n#main .card p { color: navy; }\n#header a { color: red; }',
+      },
+      teach: [
+        'You inherit a library stylesheet (shown in the lesson CSS) with ID-heavy selectors. Your rules come later, so they win **ties**, but not against higher specificity.',
+        { list: ['To override `#main .card p` you need at least the same ID count plus one more class: `#main .card .intro` or `#main .card p.intro`.', 'To override `#header a` (0,1,0,1), `#header .nav-link` (0,1,1,0) is enough: the class column beats the element column.', 'For your own defaults, wrap selectors in `:where()` so any single class can override them later.', 'Set text colour on a container and let it inherit; use `color: inherit` to make a link follow its parent.', '`@layer` order beats specificity: `@layer base, components;` puts components above base, even when base uses an ID.'] },
+      ],
+      example: [
+        { code: ':where(.card) p { margin: 0 0 1rem; }   /* (0,0,0,1) */\n.tight { margin: 0; }                     /* (0,0,1,0): wins easily */', lang: 'css' },
+      ],
+      task: [
+        'Without `!important`:',
+        { ol: ['`.intro` text: `teal`.', 'The nav link: `white` text on background `#1e293b`.', 'Card paragraphs get `margin: 0 0 1rem` through a `:where(.card) p` rule, and `.tight` (written as a single class) gets `margin: 0`.', 'The card has `border: 1px solid #cbd5e1`; links inside the card use `color: inherit`.', 'Declare `@layer base, components;`. In `base`, `#special { background: gray; }`. In `components`, `.btn { background: #4338ca; color: white; }`. The button must end up indigo.'] },
+      ],
+      starter: '.intro {\n  color: teal !important;\n}\n\n.nav-link {\n  color: white;\n  background: #1e293b;\n}\n\n.card p {\n  margin: 0 0 1rem;\n}\n\n.tight {\n  margin: 0;\n}\n',
+      solution: '#main .card .intro {\n  color: teal;\n}\n\n#header .nav-link {\n  color: white;\n  background: #1e293b;\n}\n\n:where(.card) p {\n  margin: 0 0 1rem;\n}\n\n.tight {\n  margin: 0;\n}\n\n.card {\n  border: 1px solid #cbd5e1;\n}\n\n.card a {\n  color: inherit;\n}\n\n@layer base, components;\n\n@layer base {\n  #special {\n    background: gray;\n  }\n}\n\n@layer components {\n  .btn {\n    background: #4338ca;\n    color: white;\n  }\n}\n',
+      checks: [
+        { label: 'beat the ID selector', mistake: 'Match or exceed (0,1,1,1): #main .card .intro.', check: ({ $, h }) => h.sameValue('color', getComputedStyle($('.intro')).color, 'teal') || `.intro is ${getComputedStyle($('.intro')).color}` },
+        { label: 'nav link', mistake: '#header .nav-link (0,1,1,0) beats #header a (0,1,0,1).', check: ({ $, h }) => { const s = getComputedStyle($('.nav-link')); return (h.sameValue('color', s.color, 'white') && h.sameValue('background-color', s.backgroundColor, '#1e293b')) || `link colour ${s.color}`; } },
+        { label: ':where keeps defaults overridable', mistake: 'Use :where(.card) p for the margin so the single .tight class can override it.', check: ({ $, $$, source }) => { const margins = $$('.card p').map((p) => getComputedStyle(p).marginBottom); return (JSON.stringify(margins) === '["16px","16px","0px"]' && /:where\(\s*\.card\s*\)\s*p/.test(source)) || `margin-bottom of the three paragraphs: ${margins.join(', ')}`; } },
+        { label: 'inheritance', mistake: 'border on .card does not reach the paragraphs; the link uses color: inherit (and so follows its paragraph).', check: ({ $, $$ }) => { const card = getComputedStyle($('.card')); const p = $$('.card p')[1]; const link = $('.card a'); return (card.borderTopWidth === '1px' && getComputedStyle(p).borderTopWidth === '0px' && getComputedStyle(link).color === getComputedStyle(p).color) || `link ${getComputedStyle(link).color} vs paragraph ${getComputedStyle(p).color}`; } },
+        { label: 'layer order beats specificity', mistake: '@layer base, components; then #special in base and .btn in components.', check: ({ $, h, source }) => (h.sameValue('background-color', getComputedStyle($('#special')).backgroundColor, '#4338ca') && /@layer\s+base\s*,\s*components\s*;/.test(source) && /@layer\s+base\s*\{[\s\S]*#special/.test(source)) || `button background ${getComputedStyle($('#special')).backgroundColor}` },
+        { label: 'no !important', mistake: 'Solve each case with specificity, :where or layers.', check: ({ source }) => !/!\s*important/i.test(source) || '!important is still used' },
+      ],
+    },
+    {
+      id: 'css-colors',
+      title: 'Colour formats, transparency, currentColor and contrast',
+      source: 'HTML & CSS course, Part 16',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<span class="badge">Sale</span>\n<div class="photo"><div class="overlay">Monsoon offer</div></div>\n<button class="btn">Buy</button>\n<button class="btn btn--active">Buy (active)</button>\n<p class="brand">Toy Shop</p>\n<p class="notice">Delivery is paused during heavy rain.</p>',
+        css: '.photo { width: 240px; height: 120px; background: linear-gradient(135deg, #0ea5e9, #22c55e); position: relative; }\n.overlay { position: absolute; inset: 0; display: grid; place-items: center; color: white; }\n.btn { color: white; border: 0; padding: 8px 16px; }',
+      },
+      teach: [
+        { table: { head: ['Format', 'Example', 'Notes'], rows: [['named', '`tomato`, `rebeccapurple`', '~150 keywords; no fine control'], ['hex', '`#4f46e5`, `#fff`', 'RRGGBB in base 16; `#4f46e580` adds alpha (80 ≈ 50%)'], ['rgb', '`rgb(79 70 229 / 50%)`', '0–255 channels; `rgba()` is the old alpha form'], ['hsl', '`hsl(243 75% 59%)`', 'hue 0–360, saturation, lightness: easy "darker" or "muted" variants'], ['oklch', '`oklch(65% 0.15 250)`', 'perceptually uniform: equal steps **look** equal across hues']] } },
+        '`#4F46E5`: 4F = 79 red, 46 = 70 green, E5 = 229 blue.',
+        'In HSL, a darker hover is the same hue and saturation with lower lightness. HSL is not perceptually uniform, though: yellow at 50% looks far brighter than blue at 50%. That is what OKLCH fixes for design-system scales.',
+        '`currentColor` is the element\'s own `color`. `border: 2px solid currentColor` keeps the border in sync with the text colour.',
+        { h: 'Contrast is a requirement' },
+        'WCAG AA: at least **4.5:1** for normal text and **3:1** for large text (24px+, or ~19px bold). DevTools\' colour picker shows the ratio.',
+      ],
+      example: [
+        { code: '.button       { background: hsl(230 70% 55%); }\n.button:hover { background: hsl(230 70% 40%); }   /* same hue and saturation, darker */', lang: 'css' },
+      ],
+      task: [
+        { ol: ['`.badge`: text colour `crimson` and a `2px solid` border that uses `currentColor`.', '`.overlay`: background `#e63946` at 50% opacity (any notation: 8-digit hex, rgb with alpha, or rgba).', '`.btn`: background `hsl(230 70% 55%)`. `.btn--active`: the same hue and saturation but visibly darker (lower lightness only).', '`.brand`: colour written in `oklch()`.', '`.notice`: background `#fff7e0` and a text colour of your choice that reaches at least 4.5:1 contrast against it.'] },
+      ],
+      starter: '.badge {\n  color: crimson;\n  border: 2px solid crimson;\n}\n\n.overlay {\n  background: #e63946;\n  opacity: 0.5;\n}\n\n.notice {\n  background: #fff7e0;\n  color: #d4a017;\n}\n',
+      solution: '.badge {\n  color: crimson;\n  border: 2px solid currentColor;\n}\n\n.overlay {\n  background: rgb(230 57 70 / 50%);\n}\n\n.btn {\n  background: hsl(230 70% 55%);\n}\n\n.btn--active {\n  background: hsl(230 70% 40%);\n}\n\n.brand {\n  color: oklch(50% 0.2 270);\n}\n\n.notice {\n  background: #fff7e0;\n  color: #5c3d00;\n}\n',
+      checks: [
+        { label: 'currentColor border', mistake: 'border: 2px solid currentColor, so it follows the crimson text.', check: ({ $, h, source }) => { const s = getComputedStyle($('.badge')); return (h.sameValue('color', s.color, 'crimson') && s.borderTopWidth === '2px' && s.borderTopColor === s.color && /currentColor/i.test(source)) || `border ${s.borderTopWidth} ${s.borderTopColor}, text ${s.color}`; } },
+        { label: 'transparent background, opaque text', mistake: 'Put the alpha in the background colour, not opacity (opacity also fades the text).', check: ({ $ }) => { const s = getComputedStyle($('.overlay')); const m = s.backgroundColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/); const alpha = m ? Number(m[4] ?? 1) : 1; return (m && m[1] === '230' && m[2] === '57' && m[3] === '70' && Math.abs(alpha - 0.5) < 0.01 && s.opacity === '1') || `background ${s.backgroundColor}, opacity ${s.opacity}`; } },
+        { label: 'darker HSL variant', mistake: '.btn hsl(230 70% 55%); .btn--active the same hue and saturation, lower lightness.', check: ({ $$ }) => { const toHsl = (rgb) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g).slice(0, 3).map((n) => Number(n) / 255); const max = Math.max(r, g, b); const min = Math.min(r, g, b); const l = (max + min) / 2; const d = max - min; if (d === 0) return [0, 0, l * 100]; const s = d / (1 - Math.abs(2 * l - 1)); let hue; if (max === r) hue = ((g - b) / d) % 6; else if (max === g) hue = (b - r) / d + 2; else hue = (r - g) / d + 4; return [(hue * 60 + 360) % 360, s * 100, l * 100]; }; const [base, active] = $$('.btn').map((b) => toHsl(getComputedStyle(b).backgroundColor)); return (Math.abs(base[0] - 230) < 2 && Math.abs(base[1] - 70) < 2 && Math.abs(base[2] - 55) < 2 && Math.abs(active[0] - 230) < 2 && Math.abs(active[1] - 70) < 3 && active[2] < base[2] - 5) || `base hsl(${base.map(Math.round).join(' ')}), active hsl(${active.map(Math.round).join(' ')})`; } },
+        { label: 'oklch', mistake: 'Write the .brand colour with oklch(L C H).', check: ({ $, source }) => (/\.brand\s*\{[^}]*oklch\(/.test(source) && /oklch/.test(getComputedStyle($('.brand')).color)) || 'the .brand colour is not oklch()' },
+        { label: 'readable contrast', mistake: 'Pick a darker text colour: at least 4.5:1 against #fff7e0.', check: ({ $ }) => { const lum = (rgb) => { const c = rgb.match(/\d+(\.\d+)?/g).slice(0, 3).map((n) => { const v = Number(n) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }; const s = getComputedStyle($('.notice')); const [a, b] = [lum(s.color), lum(s.backgroundColor)]; const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); return (ratio >= 4.5 && /255, 247, 224/.test(s.backgroundColor)) || `contrast is ${ratio.toFixed(2)}:1`; } },
+      ],
+    },
+    {
+      id: 'css-units',
+      title: 'Units: px, %, em, rem, ch and viewport units',
+      source: 'HTML & CSS course, Part 17',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<div class="outer"><div class="inner"><p class="label">Nested label</p></div></div>\n<button class="button">Add to cart</button>\n<article class="article"><p>Reading text that should stay a comfortable line length for long-form articles about the monsoon and local trains.</p></article>\n<div class="square"></div>\n<section class="hero">Hero</section>\n<div class="half-wrap"><div class="half">Half</div></div>',
+        css: '.outer, .inner { font-size: 1.2em; }\n.square { background: #c7d2fe; }\n.hero { background: #e0f2fe; }\n.half-wrap { width: 400px; }\n.half { background: #fde68a; }',
+      },
+      teach: [
+        { table: { head: ['Unit', 'Relative to', 'Use for'], rows: [['`px`', 'nothing (a CSS pixel, not a device pixel)', 'hairline borders, fixed details'], ['`%`', 'usually the parent (depends on property)', 'fluid widths'], ['`em`', 'the element\'s font size (the **parent\'s** for `font-size`)', 'spacing that scales with that component\'s text'], ['`rem`', 'the root (`html`) font size', '**font sizes** and most spacing'], ['`ch`', 'the width of "0"', 'readable line length (`max-width: 65ch`)'], ['`vw` `vh` `vmin` `vmax`', '1% of viewport width/height/smaller/larger', 'viewport-sized things'], ['`svh` `lvh` `dvh`', 'small, large, **dynamic** viewport height', 'full-height mobile sections']] } },
+        { warn: '`em` compounds: two nested `font-size: 1.2em` give 16 × 1.2 × 1.2 = 23.04px. `rem` always refers to the root, so it never compounds.' },
+        '**Use rem for text**: users who raise the browser\'s default font size (common with low vision) get bigger text everywhere. `px` font sizes ignore that setting.',
+        'On phones `100vh` uses the height with the browser toolbar hidden, so a "full-height" hero hides behind the toolbar. `100dvh` tracks the real visible height; put `100vh` first as a fallback for old browsers (the later supported declaration wins).',
+      ],
+      example: [
+        { code: '.hero {\n  min-height: 100vh;   /* fallback */\n  min-height: 100dvh;  /* used where supported */\n}\n.card { padding: 1.5rem; }\n.button { font-size: 1.25rem; padding: 0.5em 1em; }  /* padding follows the button text */', lang: 'css' },
+      ],
+      task: [
+        { ol: ['`.label` sits inside two compounding `1.2em` boxes. Make it exactly 20px with a `rem` value.', '`.button`: `font-size: 1.25rem`, padding `0.5em` vertically and `1em` horizontally (so 10px / 20px).', '`.article`: `max-width: 65ch`.', '`.square`: a perfect square `30vmin` on each side.', '`.hero`: `min-height: 100vh` as a fallback, then `min-height: 100dvh`.', '`.half`: half its parent\'s width using a percentage, and a `1px solid #94a3b8` border.'] },
+      ],
+      starter: '.label {\n  font-size: 1.25em;\n}\n\n.button {\n  font-size: 20px;\n  padding: 10px 20px;\n}\n\n.square {\n  width: 30vw;\n  height: 30vh;\n}\n',
+      solution: '.label {\n  font-size: 1.25rem;\n}\n\n.button {\n  font-size: 1.25rem;\n  padding: 0.5em 1em;\n}\n\n.article {\n  max-width: 65ch;\n}\n\n.square {\n  width: 30vmin;\n  height: 30vmin;\n}\n\n.hero {\n  min-height: 100vh;\n  min-height: 100dvh;\n}\n\n.half {\n  width: 50%;\n  border: 1px solid #94a3b8;\n}\n',
+      checks: [
+        { label: 'rem ignores nesting', mistake: 'em compounds (1.2 × 1.2 × …); 1.25rem is always 20px.', check: ({ $, source }) => (getComputedStyle($('.label')).fontSize === '20px' && /\.label\s*\{[^}]*font-size:\s*1\.25rem/.test(source)) || `.label is ${getComputedStyle($('.label')).fontSize}` },
+        { label: 'em padding follows the text', mistake: 'font-size: 1.25rem; padding: 0.5em 1em.', check: ({ $, source }) => { const s = getComputedStyle($('.button')); return (s.fontSize === '20px' && s.paddingTop === '10px' && s.paddingLeft === '20px' && /\.button\s*\{[^}]*padding:\s*0?\.5em\s+1em/.test(source) && /\.button\s*\{[^}]*font-size:\s*1\.25rem/.test(source)) || `font ${s.fontSize}, padding ${s.paddingTop} ${s.paddingLeft}`; } },
+        { label: 'readable measure', mistake: '.article { max-width: 65ch; }', check: ({ document, h }) => h.declared(document.querySelector('style[data-source="learner"]').sheet, '.article', 'max-width') === '65ch' || 'no max-width: 65ch on .article' },
+        { label: 'square in vmin', mistake: 'Both sides 30vmin.', check: ({ rect, window }) => { const r = rect('.square'); const expected = Math.min(window.innerWidth, window.innerHeight) * 0.3; return (Math.abs(r.width - r.height) < 0.5 && Math.abs(r.width - expected) < 1) || `${r.width} × ${r.height}`; } },
+        { label: 'dvh with a fallback', mistake: 'min-height: 100vh; then min-height: 100dvh; in that order.', check: ({ source }) => /\.hero\s*\{[^}]*min-height:\s*100vh;[^}]*min-height:\s*100dvh/.test(source) || 'write the 100vh fallback first, then 100dvh' },
+        { label: 'percentage and px', mistake: '.half { width: 50%; border: 1px solid #94a3b8; }', check: ({ $ }) => (getComputedStyle($('.half')).width === '200px' && getComputedStyle($('.half')).borderTopWidth === '1px') || `.half content width is ${getComputedStyle($('.half')).width}` },
+      ],
+    },
+  ],
+};

@@ -1,0 +1,102 @@
+// JavaScript & React course, Part 16 (components) and Part 17 (props).
+export default {
+  id: 'react-components-props',
+  title: 'Components and props',
+  lessons: [
+    {
+      id: 'components-composition',
+      title: 'Composition and the children prop',
+      source: 'JavaScript & React course, Part 16.4–16.6',
+      runner: 'react',
+      expose: ['Avatar', 'UserCard', 'Card', 'Modal'],
+      teach: [
+        '**Composition** means building a complex UI from small components, like `Avatar` and `UserName` combined into `UserCard`. Each piece is simple, testable on its own and reusable anywhere an avatar is needed.',
+        { code: 'function UserCard() {\n  return (\n    <div className="user-card">\n      <Avatar src="/ammaar.jpg" />\n      <UserName name="Ammaar Khatri" />\n    </div>\n  );\n}', lang: 'jsx' },
+        'Every app is a **tree** of components, like the DOM tree. Data flows down it through props, and that shape explains context and re-rendering later.',
+        { h: 'children' },
+        'Whatever you nest between a component\'s tags is passed in as the special prop **`children`**. The component decides **where** it appears. This is how you build wrappers (`Card`, `Modal`, `Layout`) that provide structure without knowing their content.',
+        { code: 'function Card({ children }) {\n  return <div className="card">{children}</div>;\n}\n\n<Card>\n  <h2>Card Title</h2>\n  <p>Some card content.</p>\n</Card>', lang: 'jsx' },
+        { h: 'When to extract a component' },
+        { list: ['It is used in more than one place.', 'It is a distinct, nameable thing (a card, a row, a modal).', 'It has its own state or logic unrelated to its parent.', 'The parent is getting long and hard to scan.'] },
+        { warn: 'Extracting every tiny piece "just in case" makes a codebase harder to navigate. Extract for a concrete reason.' },
+      ],
+      example: [
+        { code: 'function Modal({ children, onClose }) {\n  return (\n    <div className="modal-overlay">\n      <div className="modal-box" role="dialog">\n        <button onClick={onClose} aria-label="Close">×</button>\n        {children}\n      </div>\n    </div>\n  );\n}', lang: 'jsx' },
+      ],
+      task: [
+        { ol: ['`Avatar({ src, name })` renders `<img className="avatar" src={src} alt={name} />`.', '`UserCard({ name, photo })` renders `<div className="user-card">` containing `<Avatar>` and a `<span className="username">` with the name.', '`Card({ title, children })` renders `<section className="card">` with an `<h2>` title followed by the children.', '`Modal({ onClose, children })` renders `<div className="modal-overlay">` > `<div className="modal-box" role="dialog">` containing a `<button aria-label="Close">×</button>` that calls `onClose`, then the children.', '`App` renders a `Card` titled `Team` containing two `UserCard`s (Ammaar and Priya, any photo paths).'] },
+      ],
+      starter: 'function Avatar({ src, name }) {\n\n}\n\nfunction UserCard({ name, photo }) {\n\n}\n\nfunction Card({ title }) {\n  return (\n    <section className="card">\n      <h2>{title}</h2>\n    </section>\n  );\n}\n\nfunction Modal({ onClose, children }) {\n\n}\n\nexport default function App() {\n  return <Card title="Team" />;\n}\n',
+      solution: 'function Avatar({ src, name }) {\n  return <img className="avatar" src={src} alt={name} />;\n}\n\nfunction UserCard({ name, photo }) {\n  return (\n    <div className="user-card">\n      <Avatar src={photo} name={name} />\n      <span className="username">{name}</span>\n    </div>\n  );\n}\n\nfunction Card({ title, children }) {\n  return (\n    <section className="card">\n      <h2>{title}</h2>\n      {children}\n    </section>\n  );\n}\n\nfunction Modal({ onClose, children }) {\n  return (\n    <div className="modal-overlay">\n      <div className="modal-box" role="dialog">\n        <button aria-label="Close" onClick={onClose}>×</button>\n        {children}\n      </div>\n    </div>\n  );\n}\n\nexport default function App() {\n  return (\n    <Card title="Team">\n      <UserCard name="Ammaar" photo="/ammaar.jpg" />\n      <UserCard name="Priya" photo="/priya.jpg" />\n    </Card>\n  );\n}\n',
+      checks: [
+        { label: 'Avatar', mistake: 'Avatar should return <img className="avatar" src={src} alt={name} />.', check: async ({ render, el, exposed }) => { const view = await render(el(exposed.Avatar, { src: '/x.png', name: 'Rohan' })); const img = view.$('img.avatar'); return Boolean(img && img.getAttribute('src') === '/x.png' && img.alt === 'Rohan'); } },
+        { label: 'UserCard composes Avatar', mistake: 'UserCard should render div.user-card with <Avatar> and span.username.', check: async ({ render, el, exposed }) => { const view = await render(el(exposed.UserCard, { name: 'Zara', photo: '/z.png' })); return Boolean(view.$('.user-card img.avatar[alt="Zara"]') && view.text('.user-card .username') === 'Zara'); } },
+        { label: 'Card renders its children', mistake: 'Card must render {children} after the <h2>; otherwise everything nested inside <Card> disappears.', check: async ({ render, el, exposed }) => { const view = await render(el(exposed.Card, { title: 'T' }, el('p', null, 'inside'))); const kids = [...view.$('section.card').children].map((n) => n.tagName + ':' + n.textContent); return JSON.stringify(kids) === '["H2:T","P:inside"]' || `card contains ${JSON.stringify(kids)}`; } },
+        { label: 'Modal structure and close', mistake: 'Modal should render .modal-overlay > .modal-box[role=dialog] with a Close button calling onClose, then the children.', check: async ({ render, el, exposed, click }) => { let closed = 0; const view = await render(el(exposed.Modal, { onClose: () => { closed += 1; } }, el('h2', null, 'Confirm'))); const box = view.$('.modal-overlay > .modal-box[role="dialog"]'); if (!box) return 'no .modal-overlay > .modal-box[role="dialog"]'; await click(view.$('button[aria-label="Close"]')); return (closed === 1 && view.text('.modal-box h2') === 'Confirm') || `onClose called ${closed} times`; } },
+        { label: 'App: a Team card with two users', mistake: 'App should render <Card title="Team"> wrapping two <UserCard>s.', check: ({ $$, text }) => text('.card h2') === 'Team' && $$('.card .user-card').length === 2 },
+      ],
+    },
+    {
+      id: 'props-basics',
+      title: 'Props: destructuring, types and defaults',
+      source: 'JavaScript & React course, Part 17.1–17.4',
+      runner: 'react',
+      expose: ['Greeting', 'ProductCard', 'Avatar'],
+      teach: [
+        '**Props** are how a parent passes data down. `<Greeting name="Ammaar" />` calls your function with one object, `{ name: "Ammaar" }`. It is exactly a function argument.',
+        'Destructure in the parameter list, the standard style: `function Greeting({ name, age }) { … }`.',
+        { code: '<ProductCard\n  name="Wireless Mouse"            // string\n  price={599}                      // number: anything not a string uses { }\n  inStock={true}                   // boolean (or just `inStock`)\n  tags={["electronics", "office"]} // array\n  onAddToCart={() => addToCart(7)} // function\n/>', lang: 'jsx' },
+        'Defaults use default-parameter syntax: `function Avatar({ src, size = 40 })`. Same rule as plain functions: only `undefined` triggers a default; `size={null}` does not.',
+        { warn: 'Writing `price="599"` passes the **string** "599". `price={599} * 2` is not how it works either; compute inside the component.' },
+      ],
+      example: [
+        { code: 'function ProductCard({ name, price, inStock, tags }) {\n  return (\n    <div className="product">\n      <h3>{name}</h3>\n      <p>₹{price}</p>\n      {inStock ? <p>In stock</p> : <p>Out of stock</p>}\n      <p>{tags.join(", ")}</p>\n    </div>\n  );\n}', lang: 'jsx' },
+      ],
+      task: [
+        { ol: ['`Greeting({ name, age })` renders `<h1>Hello, Ammaar. You are 17.</h1>`.', '`ProductCard({ name, price, inStock, tags = [] })` renders `<article className="product">` with `<h3>` name, `<p className="price">₹599</p>`, `<p className="stock">In stock</p>` or `Out of stock`, and one `<li>` per tag inside a `<ul>`.', '`Avatar({ src, size = 40 })` renders an `<img>` with `width` and `height` set to `size`.', '`App` renders `<Greeting name="Ammaar" age={17} />` and a `ProductCard` for a ₹599 in-stock `Wireless Mouse` with tags `electronics` and `office`.'] },
+      ],
+      starter: 'function Greeting(props) {\n  return <h1>Hello, props.name.</h1>;\n}\n\nfunction ProductCard({ name, price, inStock, tags = [] }) {\n  return <article className="product"></article>;\n}\n\nfunction Avatar({ src, size }) {\n  return <img src={src} />;\n}\n\nexport default function App() {\n  return <Greeting name="Ammaar" age="17" />;\n}\n',
+      solution: 'function Greeting({ name, age }) {\n  return (\n    <h1>\n      Hello, {name}. You are {age}.\n    </h1>\n  );\n}\n\nfunction ProductCard({ name, price, inStock, tags = [] }) {\n  return (\n    <article className="product">\n      <h3>{name}</h3>\n      <p className="price">₹{price}</p>\n      <p className="stock">{inStock ? "In stock" : "Out of stock"}</p>\n      <ul>\n        {tags.map((tag) => (\n          <li key={tag}>{tag}</li>\n        ))}\n      </ul>\n    </article>\n  );\n}\n\nfunction Avatar({ src, size = 40 }) {\n  return <img src={src} width={size} height={size} alt="" />;\n}\n\nexport default function App() {\n  return (\n    <>\n      <Greeting name="Ammaar" age={17} />\n      <ProductCard name="Wireless Mouse" price={599} inStock tags={["electronics", "office"]} />\n    </>\n  );\n}\n',
+      checks: [
+        { label: 'Greeting', mistake: 'Greeting should destructure { name, age } and render "Hello, Ammaar. You are 17." with { } around each prop.', check: async ({ render, el, exposed }) => { const view = await render(el(exposed.Greeting, { name: 'Priya', age: 22 })); return view.text('h1') === 'Hello, Priya. You are 22.' || `got "${view.text('h1')}"`; } },
+        { label: 'ProductCard in stock', mistake: 'ProductCard should show the name, ₹price, "In stock", and one <li> per tag.', check: async ({ render, el, exposed }) => { const view = await render(el(exposed.ProductCard, { name: 'Pen', price: 20, inStock: true, tags: ['a', 'b'] })); return (view.text('h3') === 'Pen' && view.text('.price') === '₹20' && view.text('.stock') === 'In stock' && view.$$('li').length === 2) || `got "${view.text('.product')}"`; } },
+        { label: 'ProductCard out of stock, no tags', mistake: 'With inStock false show "Out of stock"; with no tags render an empty <ul> (default tags = []).', check: async ({ render, el, exposed }) => { const view = await render(el(exposed.ProductCard, { name: 'Ink', price: 5, inStock: false })); return view.text('.stock') === 'Out of stock' && view.$$('li').length === 0; } },
+        { label: 'Avatar default size', mistake: 'Avatar should default size to 40 and set both width and height.', check: async ({ render, el, exposed }) => { const a = (await render(el(exposed.Avatar, { src: '/a.png' }))).$('img'); const ok40 = a.getAttribute('width') === '40' && a.getAttribute('height') === '40'; const b = (await render(el(exposed.Avatar, { src: '/a.png', size: 80 }))).$('img'); return (ok40 && b.getAttribute('width') === '80') || 'width/height are not set from size'; } },
+        { label: 'App passes the right types', mistake: 'App should pass age={17} (a number) and render the Wireless Mouse ProductCard.', check: ({ text, $$ }) => text('h1') === 'Hello, Ammaar. You are 17.' && text('.product h3') === 'Wireless Mouse' && $$('.product li').length === 2 },
+      ],
+    },
+    {
+      id: 'props-callbacks',
+      title: 'Callback props and one-way data flow',
+      source: 'JavaScript & React course, Part 17.5–17.6',
+      runner: 'react',
+      expose: ['LikeButton', 'Rating', 'TodoItem'],
+      teach: [
+        'Data flows **down** through props. A child tells its parent something happened by **calling a function the parent passed down**.',
+        { code: 'function LikeButton({ onLike }) {\n  return <button onClick={onLike}>👍 Like</button>;\n}\n\nfunction Post() {\n  function handleLike() {\n    console.log("Post was liked!");\n  }\n  return <LikeButton onLike={handleLike} />;\n}', lang: 'jsx' },
+        'Naming convention: callback props are `onSomething`; the parent\'s handlers are `handleSomething`.',
+        'To send data up, call the callback **with arguments**: `onRate(4)`, `onToggle(todo.id)`. Wrap it in an arrow so it is called on click, not during render: `onClick={() => onToggle(todo.id)}`.',
+        { h: 'One-way data flow' },
+        'Props are **read-only** for the child. The parent owns the data; the child asks for changes through callbacks. This is what makes bugs traceable: data on screen can only have come from above.',
+        { warn: '`onClick={onToggle(todo.id)}` calls `onToggle` during every render and passes its return value as the handler. Use `onClick={() => onToggle(todo.id)}`.' },
+        { warn: 'Mutating an object prop (`todo.done = true`) silently changes the parent\'s data behind its back. Ask the parent to do it.' },
+      ],
+      example: [
+        { code: 'function Counter({ count, onIncrement }) {\n  return (\n    <div>\n      <p>Count: {count}</p>\n      <button onClick={onIncrement}>Increment</button>\n    </div>\n  );\n}', lang: 'jsx' },
+      ],
+      task: [
+        { ol: ['`LikeButton({ onLike })`: a button `👍 Like` that calls `onLike` when clicked (and never during render).', '`Rating({ onRate })`: five buttons labelled `1` to `5`; clicking one calls `onRate` with that **number**.', '`TodoItem({ todo, onToggle, onDelete })`: an `<li>` with a checkbox (`checked={todo.done}`) whose change calls `onToggle(todo.id)`, the title in a `<span>`, and a `Delete` button calling `onDelete(todo.id)`. It must not change `todo` itself.', '`App`: renders `<Rating onRate={...} />` that logs the rating with `console.log("Rated", n)`.'] },
+      ],
+      starter: 'function LikeButton({ onLike }) {\n  return <button onClick={onLike()}>👍 Like</button>;\n}\n\nfunction Rating({ onRate }) {\n  return <div className="rating"></div>;\n}\n\nfunction TodoItem({ todo, onToggle, onDelete }) {\n  return (\n    <li>\n      <input type="checkbox" checked={todo.done} onChange={() => { todo.done = !todo.done; }} />\n      <span>{todo.title}</span>\n    </li>\n  );\n}\n\nexport default function App() {\n  return <Rating onRate={(n) => console.log("Rated", n)} />;\n}\n',
+      solution: 'function LikeButton({ onLike }) {\n  return <button onClick={onLike}>👍 Like</button>;\n}\n\nfunction Rating({ onRate }) {\n  return (\n    <div className="rating">\n      {[1, 2, 3, 4, 5].map((n) => (\n        <button key={n} onClick={() => onRate(n)}>\n          {n}\n        </button>\n      ))}\n    </div>\n  );\n}\n\nfunction TodoItem({ todo, onToggle, onDelete }) {\n  return (\n    <li>\n      <input type="checkbox" checked={todo.done} onChange={() => onToggle(todo.id)} />\n      <span>{todo.title}</span>\n      <button onClick={() => onDelete(todo.id)}>Delete</button>\n    </li>\n  );\n}\n\nexport default function App() {\n  return <Rating onRate={(n) => console.log("Rated", n)} />;\n}\n',
+      checks: [
+        { label: 'LikeButton calls onLike on click only', mistake: 'Pass the function itself: onClick={onLike}. onClick={onLike()} calls it during render.', check: async ({ render, el, exposed, click }) => { let calls = 0; const view = await render(el(exposed.LikeButton, { onLike: () => { calls += 1; } })); const afterRender = calls; await click(view.$('button')); return (afterRender === 0 && calls === 1) || `onLike was called ${afterRender} time(s) during render and ${calls - afterRender} on click`; } },
+        { label: 'Rating has five buttons', mistake: 'Rating should render five buttons labelled 1 to 5.', check: ({ $$ }) => $$('.rating button').map((b) => b.textContent).join() === '1,2,3,4,5' },
+        { label: 'Rating sends the number up', mistake: 'Each button should call onRate with its number: onClick={() => onRate(n)}.', check: async ({ render, el, exposed, click }) => { const got = []; const view = await render(el(exposed.Rating, { onRate: (n) => got.push(n) })); await click(view.$$('button')[3]); await click(view.$$('button')[0]); return JSON.stringify(got) === '[4,1]' || `onRate received ${JSON.stringify(got)}`; } },
+        { label: 'TodoItem asks the parent', mistake: 'The checkbox should call onToggle(todo.id) and the Delete button onDelete(todo.id).', check: async ({ render, el, exposed, click }) => { const calls = []; const todo = Object.freeze({ id: 7, title: 'Read', done: false }); const view = await render(el('ul', null, el(exposed.TodoItem, { todo, onToggle: (id) => calls.push(['toggle', id]), onDelete: (id) => calls.push(['delete', id]) }))); await click(view.$('input')); const del = view.$$('button').find((b) => b.textContent === 'Delete'); if (!del) return 'no Delete button'; await click(del); return JSON.stringify(calls) === '[["toggle",7],["delete",7]]' || `callbacks received ${JSON.stringify(calls)}`; } },
+        { label: 'TodoItem does not mutate the prop', mistake: 'Never change props; the frozen todo threw when the component tried to write todo.done.', check: ({ errors }) => !errors.some((e) => /read only|read-only|Cannot assign/i.test(e)) },
+        { label: 'App logs ratings', mistake: 'App\'s Rating should log console.log("Rated", n).', check: async ({ $$, click, logs }) => { await click($$('.rating button')[4]); return logs.includes('Rated 5') || `logs: ${JSON.stringify(logs)}`; } },
+      ],
+    },
+  ],
+};

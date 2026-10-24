@@ -1,0 +1,128 @@
+// JavaScript & React course, Part 18: state.
+export default {
+  id: 'react-state',
+  title: 'State',
+  lessons: [
+    {
+      id: 'state-usestate',
+      title: 'useState and what a re-render really is',
+      source: 'JavaScript & React course, Part 18.1–18.2',
+      runner: 'react',
+      expose: ['Counter', 'LikeButton'],
+      teach: [
+        'Changing a plain variable does not update the screen: React has no way to know it changed. **State** is data that belongs to a component, changes over time, and **makes React re-render** when it changes.',
+        { code: 'import { useState } from "react";\n\nfunction Counter() {\n  const [count, setCount] = useState(0);\n  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;\n}', lang: 'jsx' },
+        '`useState(0)` returns a two-item array (destructured with any names you like): the **current value for this render**, and a **setter**, the only correct way to change it. `0` is only used on the first render.',
+        { h: 'What happens when you call the setter' },
+        { ol: ['`setCount(count + 1)` schedules a re-render.', 'React calls `Counter()` again from the top.', 'This time `useState` returns the new value (React stores state per component instance, not in the variable).', 'The JSX reflects it, and React updates only the DOM nodes that changed.'] },
+        { warn: '`setCount(count + 1); console.log(count);` logs the **old** value. `count` is a `const` snapshot of this render; the setter does not reach back and change it. The new value arrives in the next render.' },
+        'Each component instance has its own state: two `<Counter />`s count independently.',
+      ],
+      example: [
+        { code: 'function Toggle() {\n  const [isOpen, setIsOpen] = useState(false);\n  return (\n    <>\n      <button onClick={() => setIsOpen(!isOpen)}>{isOpen ? "Hide" : "Show"}</button>\n      {isOpen && <p>Now you see me.</p>}\n    </>\n  );\n}', lang: 'jsx' },
+      ],
+      task: [
+        { ol: ['`Counter({ start = 0 })`: shows `<p>Count: N</p>` and buttons `+1`, `-1` and `Reset` (back to `start`).', '`LikeButton`: a button reading `🤍 Like`, toggling to `❤️ Liked` and back on each click.', '`App` renders two independent `Counter`s and one `LikeButton`.'] },
+      ],
+      starter: 'import { useState } from "react";\n\nfunction Counter({ start = 0 }) {\n  let count = start;\n  return (\n    <div className="counter">\n      <p>Count: {count}</p>\n      <button onClick={() => { count = count + 1; }}>+1</button>\n    </div>\n  );\n}\n\nfunction LikeButton() {\n  return <button className="like">🤍 Like</button>;\n}\n\nexport default function App() {\n  return (\n    <>\n      <Counter />\n      <LikeButton />\n    </>\n  );\n}\n',
+      solution: 'import { useState } from "react";\n\nfunction Counter({ start = 0 }) {\n  const [count, setCount] = useState(start);\n  return (\n    <div className="counter">\n      <p>Count: {count}</p>\n      <button onClick={() => setCount(count + 1)}>+1</button>\n      <button onClick={() => setCount(count - 1)}>-1</button>\n      <button onClick={() => setCount(start)}>Reset</button>\n    </div>\n  );\n}\n\nfunction LikeButton() {\n  const [liked, setLiked] = useState(false);\n  return (\n    <button className="like" onClick={() => setLiked((prev) => !prev)}>\n      {liked ? "❤️ Liked" : "🤍 Like"}\n    </button>\n  );\n}\n\nexport default function App() {\n  return (\n    <>\n      <Counter />\n      <Counter start={10} />\n      <LikeButton />\n    </>\n  );\n}\n',
+      checks: [
+        { label: '+1 updates the screen', mistake: 'A plain variable never re-renders. Use const [count, setCount] = useState(start) and call setCount.', check: async ({ render, el, exposed, click }) => { const view = await render(el(exposed.Counter)); const plus = view.$$('button').find((b) => b.textContent === '+1'); await click(plus); await click(plus); return view.text('p') === 'Count: 2' || `after two clicks it shows "${view.text('p')}"`; } },
+        { label: '-1 and Reset', mistake: 'Add -1 and Reset buttons; Reset goes back to the start prop.', check: async ({ render, el, exposed, click }) => { const view = await render(el(exposed.Counter, { start: 5 })); const btn = (label) => view.$$('button').find((b) => b.textContent === label); if (!btn('-1') || !btn('Reset')) return 'missing -1 or Reset button'; await click(btn('-1')); await click(btn('-1')); const low = view.text('p'); await click(btn('Reset')); return (low === 'Count: 3' && view.text('p') === 'Count: 5') || `got "${low}" then "${view.text('p')}"`; } },
+        { label: 'counters are independent', mistake: 'App should render two Counters (one with start={10}); each keeps its own state.', check: async ({ $$, click }) => { const counters = $$('.counter'); if (counters.length < 2) return `found ${counters.length} counters`; await click(counters[0].querySelector('button')); return counters.map((c) => c.querySelector('p').textContent).join('|') === 'Count: 1|Count: 10' || counters.map((c) => c.querySelector('p').textContent).join('|'); } },
+        { label: 'LikeButton toggles', mistake: 'LikeButton needs boolean state: "🤍 Like" → "❤️ Liked" → "🤍 Like".', check: async ({ render, el, exposed, click }) => { const view = await render(el(exposed.LikeButton)); const seen = [view.text('button')]; await click(view.$('button')); seen.push(view.text('button')); await click(view.$('button')); seen.push(view.text('button')); return JSON.stringify(seen) === JSON.stringify(['🤍 Like', '❤️ Liked', '🤍 Like']) || `got ${JSON.stringify(seen)}`; } },
+        { label: 'uses useState', mistake: 'Use the useState hook.', check: ({ source }) => /useState\s*\(/.test(source) },
+      ],
+    },
+    {
+      id: 'state-functional-updates',
+      title: 'Batching and functional updates',
+      source: 'JavaScript & React course, Part 18.3',
+      runner: 'react',
+      teach: [
+        'React **batches** all state updates from one event into a single re-render. Three `setCount(count + 1)` calls in one handler all read the **same snapshot** (`count` is, say, 0), so they all ask for 1. One click, +1, not +3.',
+        { code: 'function handleClick() {\n  setCount(count + 1); // setCount(0 + 1)\n  setCount(count + 1); // setCount(0 + 1)\n  setCount(count + 1); // setCount(0 + 1)\n}', lang: 'jsx' },
+        'Pass a **function** instead: React calls it with the latest pending value, so updates chain: `0 → 1 → 2 → 3`.',
+        { code: 'function handleClick() {\n  setCount((prev) => prev + 1);\n  setCount((prev) => prev + 1);\n  setCount((prev) => prev + 1);\n}', lang: 'jsx' },
+        '**Rule:** whenever the new value depends on the old one (+1, toggling, appending), use the functional form. It also protects **delayed** updates: a `setTimeout` callback closes over the `count` of the render that created it, which may be stale by the time it runs.',
+        { code: 'setTimeout(() => setCount(count + 1), 1000);       // ⚠️ may use a stale count\nsetTimeout(() => setCount((prev) => prev + 1), 1000); // ✅ always the latest', lang: 'jsx' },
+        'If the new value does not depend on the old (`setName("Ammaar")`), the plain form is fine.',
+      ],
+      example: [
+        { code: 'const [isOpen, setIsOpen] = useState(false);\nsetIsOpen((prev) => !prev); // a toggle depends on the previous value', lang: 'jsx' },
+      ],
+      task: [
+        'Build `App` with one count shown as `<p>Count: N</p>` and three buttons:',
+        { ol: ['`+3` adds 3 by calling the setter **three times** with functional updates.', '`Add later` adds 1 after 50 ms. Clicking it twice quickly must end at 2, not 1.', '`Toggle` flips a boolean shown as `<p className="flag">on</p>` / `off` (starting `off`), using the functional form.'] },
+      ],
+      starter: 'import { useState } from "react";\n\nexport default function App() {\n  const [count, setCount] = useState(0);\n\n  function addThree() {\n    setCount(count + 1);\n    setCount(count + 1);\n    setCount(count + 1);\n  }\n\n  function addLater() {\n    setTimeout(() => setCount(count + 1), 50);\n  }\n\n  return (\n    <div>\n      <p>Count: {count}</p>\n      <button onClick={addThree}>+3</button>\n      <button onClick={addLater}>Add later</button>\n    </div>\n  );\n}\n',
+      solution: 'import { useState } from "react";\n\nexport default function App() {\n  const [count, setCount] = useState(0);\n  const [flag, setFlag] = useState(false);\n\n  function addThree() {\n    setCount((prev) => prev + 1);\n    setCount((prev) => prev + 1);\n    setCount((prev) => prev + 1);\n  }\n\n  function addLater() {\n    setTimeout(() => setCount((prev) => prev + 1), 50);\n  }\n\n  return (\n    <div>\n      <p>Count: {count}</p>\n      <button onClick={addThree}>+3</button>\n      <button onClick={addLater}>Add later</button>\n      <button onClick={() => setFlag((prev) => !prev)}>Toggle</button>\n      <p className="flag">{flag ? "on" : "off"}</p>\n    </div>\n  );\n}\n',
+      checks: [
+        { label: '+3 adds three', mistake: 'Three setCount(count + 1) calls all use the same snapshot, so they add 1. Use setCount((prev) => prev + 1) three times.', check: async ({ $$, click, text }) => { await click($$('button').find((b) => b.textContent === '+3')); return text('p') === 'Count: 3' || `one click shows "${text('p')}"`; } },
+        { label: '+3 really calls the setter three times', mistake: 'The task asks for three functional updates, not one setCount(prev => prev + 3).', check: ({ source }) => (source.match(/=>\s*\w+\s*\+\s*1/g) || []).length >= 3 },
+        { label: 'two quick delayed adds give 2', mistake: 'Both timeouts closed over count = 0, so both set 1. Use the functional form inside setTimeout.', check: async ({ $$, click, wait, text }) => { const later = $$('button').find((b) => b.textContent === 'Add later'); await click(later); await click(later); await wait(120); return text('p') === 'Count: 2' || `after two quick clicks it shows "${text('p')}"`; } },
+        { label: 'toggle', mistake: 'Add a Toggle button flipping a boolean shown in p.flag ("off" first).', check: async ({ $$, click, text }) => { const t = $$('button').find((b) => b.textContent === 'Toggle'); if (!t) return 'no Toggle button'; const first = text('p.flag'); await click(t); const second = text('p.flag'); await click(t); return (first === 'off' && second === 'on' && text('p.flag') === 'off') || `got ${first}, ${second}, ${text('p.flag')}`; } },
+      ],
+    },
+    {
+      id: 'state-arrays-objects',
+      title: 'Immutable updates: arrays, objects and nested state',
+      source: 'JavaScript & React course, Part 18.4–18.5',
+      runner: 'react',
+      expose: ['ShoppingList', 'Settings', 'NumberList'],
+      teach: [
+        'React decides whether state changed with a cheap **reference** check (`Object.is`), not by comparing contents. If you mutate an array and pass the **same** array back, React sees no change and may not re-render. The data is right; the screen is not.',
+        { code: '// ❌\nitems.push(newItem);\nsetItems(items);          // same reference\n\n// ✅ always a NEW array or object\nsetItems([...items, newItem]);                                    // add\nsetItems(items.filter((item) => item.id !== id));                 // remove\nsetItems(items.map((item) => (item.id === id ? { ...item, done: true } : item))); // update one\nsetUser({ ...user, age: 18 });                                    // object field', lang: 'jsx' },
+        { h: 'Nested state' },
+        'Spread copies one level. Copy **every level you change**: `{ ...user, address: { ...user.address, city: "Delhi" } }`. Writing `address: { city: "Delhi" }` would drop `pincode`; writing `newUser.address.city = "Delhi"` after a shallow copy mutates the original.',
+        '> **Never modify state directly.** Create a new value and pass it to the setter. This one rule prevents most "my UI is not updating" bugs.',
+        { tip: 'Keep state as flat as you reasonably can: deep nesting makes every update long and error-prone.' },
+      ],
+      example: [
+        { code: 'const [settings, setSettings] = useState({ theme: "light", notifications: { email: true, sms: false } });\n\nfunction toggleSms() {\n  setSettings((prev) => ({\n    ...prev,\n    notifications: { ...prev.notifications, sms: !prev.notifications.sms },\n  }));\n}', lang: 'jsx' },
+      ],
+      task: [
+        { ol: ['`ShoppingList`: an `<input aria-label="Item">`, an `Add` button appending the trimmed text (ignore empty) and clearing the input, and a `<ul>` where each `<li>` has the item and a `Remove` button. Items are `{ id, name }` objects.', '`Settings`: state `{ theme: "light", notifications: { email: true, sms: false } }`. Show `<p className="sms">SMS: on/off</p>` and `<p className="email">Email: on/off</p>`, and a `Toggle SMS` button that changes **only** sms.', '`NumberList` (given) never updates on screen. Fix the mutation bug.'] },
+      ],
+      starter: 'import { useState } from "react";\n\nfunction ShoppingList() {\n  const [items, setItems] = useState([]);\n  const [text, setText] = useState("");\n  return (\n    <div className="shopping">\n      <input aria-label="Item" value={text} onChange={(e) => setText(e.target.value)} />\n      <button>Add</button>\n      <ul></ul>\n    </div>\n  );\n}\n\nfunction Settings() {\n  const [settings, setSettings] = useState({ theme: "light", notifications: { email: true, sms: false } });\n  function toggleSms() {\n    setSettings({ ...settings, notifications: { sms: !settings.notifications.sms } });\n  }\n  return (\n    <div>\n      <p className="sms">SMS: {settings.notifications.sms ? "on" : "off"}</p>\n      <p className="email">Email: {settings.notifications.email ? "on" : "off"}</p>\n      <button onClick={toggleSms}>Toggle SMS</button>\n    </div>\n  );\n}\n\nfunction NumberList() {\n  const [numbers, setNumbers] = useState([]);\n  function addNumber() {\n    numbers.push(numbers.length + 1);\n    setNumbers(numbers);\n  }\n  return (\n    <div>\n      <button onClick={addNumber}>Add Number</button>\n      <ul className="numbers">{numbers.map((n) => <li key={n}>{n}</li>)}</ul>\n    </div>\n  );\n}\n\nexport default function App() {\n  return <ShoppingList />;\n}\n',
+      solution: 'import { useState } from "react";\n\nfunction ShoppingList() {\n  const [items, setItems] = useState([]);\n  const [text, setText] = useState("");\n\n  function handleAdd() {\n    const name = text.trim();\n    if (!name) return;\n    setItems((prev) => [...prev, { id: Date.now() + Math.random(), name }]);\n    setText("");\n  }\n\n  function handleRemove(id) {\n    setItems((prev) => prev.filter((item) => item.id !== id));\n  }\n\n  return (\n    <div className="shopping">\n      <input aria-label="Item" value={text} onChange={(e) => setText(e.target.value)} />\n      <button onClick={handleAdd}>Add</button>\n      <ul>\n        {items.map((item) => (\n          <li key={item.id}>\n            {item.name} <button onClick={() => handleRemove(item.id)}>Remove</button>\n          </li>\n        ))}\n      </ul>\n    </div>\n  );\n}\n\nfunction Settings() {\n  const [settings, setSettings] = useState({ theme: "light", notifications: { email: true, sms: false } });\n  function toggleSms() {\n    setSettings((prev) => ({\n      ...prev,\n      notifications: { ...prev.notifications, sms: !prev.notifications.sms },\n    }));\n  }\n  return (\n    <div>\n      <p className="sms">SMS: {settings.notifications.sms ? "on" : "off"}</p>\n      <p className="email">Email: {settings.notifications.email ? "on" : "off"}</p>\n      <button onClick={toggleSms}>Toggle SMS</button>\n    </div>\n  );\n}\n\nfunction NumberList() {\n  const [numbers, setNumbers] = useState([]);\n  function addNumber() {\n    setNumbers((prev) => [...prev, prev.length + 1]);\n  }\n  return (\n    <div>\n      <button onClick={addNumber}>Add Number</button>\n      <ul className="numbers">{numbers.map((n) => <li key={n}>{n}</li>)}</ul>\n    </div>\n  );\n}\n\nexport default function App() {\n  return <ShoppingList />;\n}\n',
+      checks: [
+        { label: 'adding items', mistake: 'Add should append { id, name } with a new array ([...prev, item]) and clear the input.', check: async ({ type, $$, click, $ }) => { const add = $$('button').find((b) => b.textContent === 'Add'); await type('input', ' Milk '); await click(add); await type('input', 'Bread'); await click(add); const names = $$('li').map((li) => li.firstChild.textContent.trim()); return (JSON.stringify(names) === '["Milk","Bread"]' && $('input').value === '') || `list: ${JSON.stringify(names)}, input: "${$('input').value}"`; } },
+        { label: 'empty text is ignored', mistake: 'Trim the text and do nothing when it is empty.', check: async ({ type, $$, click }) => { await type('input', '   '); await click($$('button').find((b) => b.textContent === 'Add')); return $$('li').length === 0; } },
+        { label: 'removing an item', mistake: 'Remove should filter the item out by id (a new array).', check: async ({ type, $$, click }) => { const add = $$('button').find((b) => b.textContent === 'Add'); for (const name of ['A', 'B', 'C']) { await type('input', name); await click(add); } await click($$('li')[1].querySelector('button')); const names = $$('li').map((li) => li.firstChild.textContent.trim()); return JSON.stringify(names) === '["A","C"]' || `after removing B: ${JSON.stringify(names)}`; } },
+        { label: 'nested toggle keeps email', mistake: 'Spread both levels: { ...prev, notifications: { ...prev.notifications, sms: !prev.notifications.sms } }. Replacing notifications with { sms } loses email.', check: async ({ render, el, exposed, click }) => { const view = await render(el(exposed.Settings)); await click(view.$('button')); return (view.text('.sms') === 'SMS: on' && view.text('.email') === 'Email: on') || `got "${view.text('.sms')}" and "${view.text('.email')}"`; } },
+        { label: 'NumberList updates', mistake: 'numbers.push + setNumbers(numbers) passes the same array, so React skips the render. Use setNumbers((prev) => [...prev, prev.length + 1]).', check: async ({ render, el, exposed, click }) => { const view = await render(el(exposed.NumberList)); await click(view.$('button')); await click(view.$('button')); return view.$$('.numbers li').length === 2 || `the list shows ${view.$$('.numbers li').length} numbers after two clicks`; } },
+      ],
+    },
+    {
+      id: 'state-structure',
+      title: 'Structuring state: one object vs many, and derived values',
+      source: 'JavaScript & React course, Part 18.6',
+      runner: 'react',
+      teach: [
+        'Independent values that change separately read best as separate `useState` calls. Related values that change together (all the fields of one form) read best as **one object** updated by a generic helper with a computed key:',
+        { code: 'const [formData, setFormData] = useState({ name: "", email: "", age: 0 });\n\nfunction updateField(field, value) {\n  setFormData((prev) => ({ ...prev, [field]: value }));\n}', lang: 'jsx' },
+        { h: 'Do not store what you can compute' },
+        'If a value can be calculated from existing state or props, **calculate it during render** instead of keeping it in another `useState`. Duplicated state drifts out of sync: you update `items` and forget `total`.',
+        { code: '// ❌ two sources of truth\nconst [items, setItems] = useState([]);\nconst [total, setTotal] = useState(0);\n\n// ✅ one source of truth, total derived every render\nconst total = items.reduce((sum, item) => sum + item.price * item.qty, 0);', lang: 'jsx' },
+        { tip: 'Ask of every piece of state: "could I compute this from something I already have?" If yes, it is not state.' },
+      ],
+      example: [
+        { code: 'const [query, setQuery] = useState("");\nconst visible = products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));\n// no "filteredProducts" state needed', lang: 'jsx' },
+      ],
+      task: [
+        'Build a small cart in `App`:',
+        { ol: ['State: `items` (start with the `START` array) and a `form` object `{ name: "", price: "" }` in **one** `useState`, updated through an `updateField(field, value)` helper.', 'Inputs `aria-label="Name"` and `aria-label="Price"` bound to the form object; an `Add` button adds `{ id, name, price: Number(price), qty: 1 }` and resets the form.', 'Each `<li>` shows `<name> × <qty>` with a `+` button increasing that item\'s qty.', '`<p className="total">Total: ₹N</p>` and `<p className="count">Items: N</p>` (sum of qty) are **derived** during render, not stored in state.'] },
+      ],
+      starter: 'import { useState } from "react";\n\nconst START = [\n  { id: 1, name: "Notebook", price: 60, qty: 2 },\n  { id: 2, name: "Pen", price: 20, qty: 1 },\n];\n\nexport default function App() {\n  const [items, setItems] = useState(START);\n  const [name, setName] = useState("");\n  const [price, setPrice] = useState("");\n  const [total, setTotal] = useState(140);\n\n  return (\n    <div>\n      <ul>\n        {items.map((item) => <li key={item.id}>{item.name} × {item.qty}</li>)}\n      </ul>\n      <p className="total">Total: ₹{total}</p>\n    </div>\n  );\n}\n',
+      solution: 'import { useState } from "react";\n\nconst START = [\n  { id: 1, name: "Notebook", price: 60, qty: 2 },\n  { id: 2, name: "Pen", price: 20, qty: 1 },\n];\n\nexport default function App() {\n  const [items, setItems] = useState(START);\n  const [form, setForm] = useState({ name: "", price: "" });\n\n  function updateField(field, value) {\n    setForm((prev) => ({ ...prev, [field]: value }));\n  }\n\n  function addItem() {\n    if (!form.name.trim()) return;\n    setItems((prev) => [...prev, { id: Date.now(), name: form.name.trim(), price: Number(form.price), qty: 1 }]);\n    setForm({ name: "", price: "" });\n  }\n\n  function increase(id) {\n    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, qty: item.qty + 1 } : item)));\n  }\n\n  const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);\n  const count = items.reduce((sum, item) => sum + item.qty, 0);\n\n  return (\n    <div>\n      <input aria-label="Name" value={form.name} onChange={(e) => updateField("name", e.target.value)} />\n      <input aria-label="Price" value={form.price} onChange={(e) => updateField("price", e.target.value)} />\n      <button onClick={addItem}>Add</button>\n      <ul>\n        {items.map((item) => (\n          <li key={item.id}>\n            {item.name} × {item.qty} <button onClick={() => increase(item.id)}>+</button>\n          </li>\n        ))}\n      </ul>\n      <p className="total">Total: ₹{total}</p>\n      <p className="count">Items: {count}</p>\n    </div>\n  );\n}\n',
+      checks: [
+        { label: 'derived total and count', mistake: 'Compute total (sum of price × qty) and count (sum of qty) during render: ₹140 and 3 items to start.', check: ({ text }) => (text('.total') === 'Total: ₹140' && text('.count') === 'Items: 3') || `got "${text('.total')}" and "${text('.count')}"` },
+        { label: '+ updates qty and totals', mistake: 'The + button should increase that item\'s qty immutably (map + spread), and the derived totals follow automatically.', check: async ({ $$, click, text }) => { await click($$('li')[1].querySelector('button')); return (text('li:nth-child(2)').startsWith('Pen × 2') && text('.total') === 'Total: ₹160' && text('.count') === 'Items: 4') || `got "${text('li:nth-child(2)')}", "${text('.total')}"`; } },
+        { label: 'adding an item', mistake: 'Add should append { id, name, price: Number(price), qty: 1 } and reset the form inputs.', check: async ({ type, $$, click, text, $ }) => { await type('input[aria-label="Name"]', 'Ruler'); await type('input[aria-label="Price"]', '15'); await click($$('button').find((b) => b.textContent === 'Add')); return ($$('li').length === 3 && text('.total') === 'Total: ₹155' && $('input[aria-label="Name"]').value === '' && $('input[aria-label="Price"]').value === '') || `items: ${$$('li').length}, total "${text('.total')}"`; } },
+        { label: 'form is one state object', mistake: 'Keep the form in one useState object updated by updateField(field, value) with a computed key [field].', check: ({ source }) => /updateField/.test(source) && /\[\s*field\s*\]\s*:/.test(source) },
+        { label: 'totals are not state', mistake: 'Do not store total in useState; compute it from items.', check: ({ source }) => !/useState\(\s*140\s*\)/.test(source) && !/\[\s*total\s*,\s*setTotal\s*\]/.test(source) },
+      ],
+    },
+  ],
+};

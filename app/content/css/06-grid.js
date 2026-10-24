@@ -1,0 +1,168 @@
+// HTML & CSS course, Part 25: CSS Grid.
+export default {
+  id: 'css-grid',
+  title: 'CSS Grid',
+  lessons: [
+    {
+      id: 'css-grid-tracks',
+      title: 'Grid tracks: fr, repeat(), minmax() and implicit rows',
+      source: 'HTML & CSS course, Part 25',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<div class="three"><div>Trains</div><div>Pneumonoultramicroscopicsilicovolcanoconiosis</div><div>Blocks</div></div>\n<div class="shell"><aside class="side">Sidebar</aside><main class="main">Content</main></div>\n<div class="rows"><header class="top">Header</header><section class="middle">Content</section><footer class="bottom">Footer</footer></div>\n<div class="implicit"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div></div>',
+        css: 'body { margin: 0; font: 16px/1.4 Arial, sans-serif; }\n.three { width: 632px; gap: 16px; margin-bottom: 16px; }\n.three > div { background: #e0e7ff; }\n.shell { width: 700px; margin-bottom: 16px; }\n.side { background: #f1f5f9; }\n.main { background: #ecfdf5; }\n.rows { height: 300px; margin-bottom: 16px; }\n.top, .bottom { background: #1e293b; color: white; }\n.implicit { width: 600px; gap: 8px; }\n.implicit > div { background: #fde68a; }',
+      },
+      teach: [
+        'Flexbox lays out one line at a time and lets content drive sizes. **Grid** is two-dimensional: you define rows **and** columns on the container first, then items drop into the cells. Rule of thumb: one direction (a navbar, a stack of fields) → Flexbox; rows and columns that must line up (a page shell, a dashboard, a card grid) → Grid. Real code nests them: Grid for the page, Flexbox inside each component.',
+        { h: 'Vocabulary' },
+        { list: ['**Lines** divide the grid and are numbered from **1**; a 3-column grid has 4 column lines.', '**Tracks** are the rows and columns between two lines.', 'A **cell** is one row × one column; an **area** is a rectangle of cells.', 'Only **direct children** are grid items.'] },
+        { h: 'Defining tracks' },
+        { code: 'grid-template-columns: 200px 200px 200px;     /* fixed */\ngrid-template-columns: 1fr 2fr 1fr;           /* fr = a share of the free space: 1 : 2 : 1 */\ngrid-template-columns: 250px 1fr;             /* fixed sidebar + flexible content */\ngrid-template-columns: repeat(4, 1fr);        /* = 1fr 1fr 1fr 1fr */\ngrid-template-columns: repeat(3, minmax(150px, 1fr));  /* at least 150px, grow to share */\ngrid-template-rows: 80px 1fr 60px;            /* header, flexible middle, footer */', lang: 'css' },
+        '`gap` sits between tracks only, never on the outer edges, and is taken out **before** `fr` space is shared.',
+        { h: 'The 1fr minimum trap' },
+        'A bare `1fr` really means `minmax(auto, 1fr)`: the track will not shrink below its content\'s minimum width. One long word, URL or wide image makes that column wider and the others narrower, the same trap as Flexbox\'s `min-width: auto`. Use `minmax(0, 1fr)` when columns must be truly equal, and let the content wrap (`overflow-wrap: anywhere`) or scroll inside.',
+        { h: 'Implicit rows' },
+        'The tracks you define are the **explicit** grid. Extra items do not overflow: the browser adds **implicit** rows for them. `grid-auto-rows: 120px` sizes those rows (without it they size to their content); `grid-auto-flow: column` fills columns first instead.',
+      ],
+      example: [
+        { code: '.app {\n  display: grid;\n  grid-template-columns: 240px minmax(0, 1fr);\n  grid-template-rows: 64px 1fr;\n  min-height: 100vh;\n}', lang: 'css' },
+      ],
+      task: [
+        { ol: ['`.three`: a grid of three equal columns written with `repeat()`. They must stay exactly equal (200px each) even though the middle cell holds a very long word.', '`.shell`: a grid with a fixed 250px sidebar and a flexible content column.', '`.rows`: a grid whose rows are 60px, flexible, 40px, filling the 300px height.', '`.implicit`: three equal columns; every automatically created row is 80px tall.'] },
+      ],
+      starter: '.three {\n  display: grid;\n  grid-template-columns: 1fr 1fr 1fr;\n}\n',
+      solution: '.three {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n}\n\n.three > div {\n  overflow-wrap: anywhere;\n}\n\n.shell {\n  display: grid;\n  grid-template-columns: 250px 1fr;\n}\n\n.rows {\n  display: grid;\n  grid-template-rows: 60px 1fr 40px;\n}\n\n.implicit {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  grid-auto-rows: 80px;\n}\n',
+      checks: [
+        { label: 'truly equal columns', mistake: 'repeat(3, minmax(0, 1fr)): a bare 1fr will not shrink below the long word, so the middle column grows.', check: ({ document, $$, rect, h }) => { const w = $$('.three > div').map((d) => Math.round(rect(d).width)); const decl = h.declared(document.querySelector('style[data-source="learner"]').sheet, '.three', 'grid-template-columns') || ''; if (!/repeat\(/.test(decl)) return 'write the columns with repeat()'; return w.every((x) => x === 200) || `column widths are ${w.join(' / ')}px`; } },
+        { label: 'fixed sidebar + flexible column', mistake: 'grid-template-columns: 250px 1fr on .shell.', check: ({ rect }) => { const w = [Math.round(rect('.side').width), Math.round(rect('.main').width)]; return w.join() === '250,450' || `sidebar/content are ${w.join(' / ')}px`; } },
+        { label: 'header / flexible / footer rows', mistake: 'grid-template-rows: 60px 1fr 40px on .rows.', check: ({ rect }) => { const hgt = ['.top', '.middle', '.bottom'].map((s) => Math.round(rect(s).height)); return hgt.join() === '60,200,40' || `row heights are ${hgt.join(' / ')}px`; } },
+        { label: 'implicit rows sized', mistake: 'grid-template-columns: repeat(3, 1fr) and grid-auto-rows: 80px on .implicit.', check: ({ $$, rect }) => { const items = $$('.implicit > div').map((d) => rect(d)); const heights = items.map((r) => Math.round(r.height)); const drop = Math.round(items[6].top - items[0].top); return (heights.every((x) => x === 80) && drop === 176 && Math.round(items[3].left) === Math.round(items[0].left) && Math.round(items[0].width) === 195) || `item heights ${[...new Set(heights)].join('/')}px, item 7 is ${drop}px below item 1`; } },
+      ],
+    },
+    {
+      id: 'css-grid-auto-fit',
+      title: 'Responsive grids: auto-fit vs auto-fill',
+      source: 'HTML & CSS course, Part 25',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<div class="cards"><article class="card">1</article><article class="card">2</article><article class="card">3</article><article class="card">4</article><article class="card">5</article><article class="card">6</article></div>\n<div class="featured"><article class="card">A</article><article class="card">B</article><article class="card">C</article></div>\n<div class="swatches"><div class="swatch"></div><div class="swatch"></div><div class="swatch"></div></div>',
+        css: 'body { margin: 0; font: 16px/1.4 Arial, sans-serif; }\n.cards, .featured { width: 1000px; margin-bottom: 16px; }\n.card { height: 80px; background: #e0e7ff; }\n.swatches { width: 600px; }\n.swatch { height: 60px; background: #f59e0b; }',
+      },
+      teach: [
+        'The most useful single line in modern CSS:',
+        { code: '.card-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n  gap: 16px;\n}', lang: 'css' },
+        { list: ['`minmax(250px, 1fr)`: no column narrower than 250px; spare room is shared.', '`repeat(auto-fit, …)`: instead of a fixed count, fit as many columns as the container allows, recalculated live as it resizes.', 'Result: 4 columns on a laptop, 2 on a tablet, 1 on a phone, with **no media queries**.'] },
+        { h: 'auto-fit vs auto-fill' },
+        'Both compute the same number of tracks. They differ only when there are **fewer items than tracks**:',
+        { table: { head: ['', 'Empty tracks', 'Existing items'], rows: [['`auto-fill`', 'kept (invisible)', 'stay near the minimum size, leaving space on the right'], ['`auto-fit`', 'collapsed to 0', 'grow to fill the whole row']] } },
+        '`auto-fit` is right for almost every card or product grid. `auto-fill` is for grids where item size must stay consistent, like a colour-swatch picker.',
+        { warn: 'If a track minimum is wider than the container (say `minmax(400px, 1fr)` on a 320px phone), the grid overflows. Guard with `minmax(min(400px, 100%), 1fr)`.' },
+      ],
+      example: [
+        { code: '.gallery {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));\n  grid-auto-rows: 200px;\n  gap: 8px;\n}\n.gallery img { width: 100%; height: 100%; object-fit: cover; }', lang: 'css' },
+      ],
+      task: [
+        { ol: ['`.cards`: a responsive grid, cards at least 220px wide, `gap: 16px`. It must show 4 columns at 1000px, 2 at 500px and 1 at 240px, without media queries.', '`.featured`: the same 220px pattern and gap, but there are only 3 cards: they must **grow** to fill the whole 1000px row.', '`.swatches`: swatches at least 80px with `gap: 8px`, that stay small (about 93px) and keep the empty space for more swatches, instead of stretching.'] },
+      ],
+      starter: '.cards {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 16px;\n}\n\n.swatches {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));\n  gap: 8px;\n}\n',
+      solution: '.cards,\n.featured {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));\n  gap: 16px;\n}\n\n.swatches {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));\n  gap: 8px;\n}\n',
+      checks: [
+        { label: 'column count adapts', mistake: 'repeat(auto-fit, minmax(220px, 1fr)) with gap: 16px on .cards; a fixed repeat(4, …) never changes.', check: async ({ $, $$, rect, settle }) => { const count = () => { const cards = $$('.cards .card'); const top = Math.round(rect(cards[0]).top); return cards.filter((c) => Math.round(rect(c).top) === top).length; }; const out = []; for (const w of ['1000px', '500px', '240px']) { $('.cards').style.width = w; await settle(); out.push(count()); } $('.cards').style.width = ''; await settle(); return out.join() === '4,2,1' || `columns at 1000/500/240px: ${out.join(' / ')}`; } },
+        { label: 'cards share the row', mistake: 'minmax(220px, 1fr): at 1000px the four columns are 238px each.', check: ({ rect }) => Math.round(rect('.cards .card').width) === 238 || `cards are ${Math.round(rect('.cards .card').width)}px wide` },
+        { label: 'auto-fit grows the few items', mistake: 'auto-fit collapses the empty tracks so the 3 featured cards fill the row (about 323px each).', check: ({ $$, rect }) => { const w = $$('.featured .card').map((c) => Math.round(rect(c).width)); return w.every((x) => x === 323) || `featured cards are ${w.join(' / ')}px`; } },
+        { label: 'auto-fill keeps swatches small', mistake: 'repeat(auto-fill, minmax(80px, 1fr)): empty tracks are kept, so 3 swatches stay about 93px.', check: ({ $$, rect }) => { const w = $$('.swatch').map((c) => Math.round(rect(c).width)); return w.every((x) => x === 93) || `swatches are ${w.join(' / ')}px wide${w[0] > 150 ? ' (auto-fit stretched them)' : ''}`; } },
+      ],
+    },
+    {
+      id: 'css-grid-placement',
+      title: 'Placing items: lines, span, -1 and dense packing',
+      source: 'HTML & CSS course, Part 25',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<div class="gallery">\n  <div class="feature">Feature</div>\n  <div>a</div><div>b</div><div>c</div><div>d</div>\n  <div class="wide">Wide</div>\n  <div>e</div>\n  <div class="banner">Banner</div>\n  <div class="last">f</div>\n</div>',
+        css: 'body { margin: 0; font: 16px/1.4 Arial, sans-serif; }\n.gallery { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 100px; gap: 8px; width: 440px; }\n.gallery > div { background: #e0e7ff; padding: 4px; }\n.feature { background: #a5b4fc !important; }\n.banner { background: #fde68a !important; }',
+      },
+      teach: [
+        { code: '.a { grid-column: 1 / 3; grid-row: 1 / 3; }  /* from line 1 to line 3: 2 columns × 2 rows */\n.b { grid-column: span 2; }                   /* 2 columns from wherever it is auto-placed */\n.c { grid-column: 1 / -1; }                   /* first line to the LAST line: full width */', lang: 'css' },
+        { list: ['`start / end` uses **line** numbers. A 4-column grid has lines 1–5, so `1 / 5` spans everything, until someone adds a fifth column.', 'Negative numbers count from the end: `-1` is always the last line, so `1 / -1` is the robust full-width idiom.', '`span N` sizes without fixing a position.'] },
+        { h: 'Holes and dense packing' },
+        'Auto-placement moves forward only. When a big or full-width item will not fit in the space left on a row, it drops to the next row and later items continue **after** it, leaving a hole behind. `grid-auto-flow: dense` (or `row dense`) restarts the search from the top for each item and backfills holes with later items that fit.',
+        { warn: 'dense packing reorders items visually, like `order`. Tab order and screen readers still follow the DOM, so use it for galleries of independent items, not for content whose order means something.' },
+      ],
+      example: [
+        { code: '.photos {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  grid-auto-flow: row dense;\n}\n.photos .tall { grid-row: span 2; }\n.photos .wide { grid-column: span 2; }', lang: 'css' },
+      ],
+      task: [
+        'The gallery is a 4-column grid with 100px rows and 8px gaps (each column is 104px).',
+        { ol: ['`.feature`: the top-left 2 × 2 block, placed with line numbers.', '`.wide`: two columns wide, from wherever it lands, using `span`.', '`.banner`: the full width of the grid using a **negative** line number, so it still works if a column is added.', 'After that, row 3 has a hole. Make the gallery backfill it with dense packing (the last item, f, should move into it).'] },
+      ],
+      starter: '.banner {\n  grid-column: 1 / 5;\n}\n',
+      solution: '.feature {\n  grid-column: 1 / 3;\n  grid-row: 1 / 3;\n}\n\n.wide {\n  grid-column: span 2;\n}\n\n.banner {\n  grid-column: 1 / -1;\n}\n\n.gallery {\n  grid-auto-flow: row dense;\n}\n',
+      checks: [
+        { label: '2 × 2 feature at the top left', mistake: '.feature { grid-column: 1 / 3; grid-row: 1 / 3; }', check: ({ rect }) => { const g = rect('.gallery'); const f = rect('.feature'); return (Math.round(f.left - g.left) === 0 && Math.round(f.top - g.top) === 0 && Math.round(f.width) === 216 && Math.round(f.height) === 208) || `the feature is ${Math.round(f.width)}×${Math.round(f.height)}px at (${Math.round(f.left - g.left)}, ${Math.round(f.top - g.top)})`; } },
+        { label: 'wide spans two columns', mistake: '.wide { grid-column: span 2; }', check: ({ document, rect, h }) => { const decl = h.declared(document.querySelector('style[data-source="learner"]').sheet, '.wide', 'grid-column-start') + ' ' + h.declared(document.querySelector('style[data-source="learner"]').sheet, '.wide', 'grid-column-end'); return (Math.round(rect('.wide').width) === 216 && /span 2/.test(decl)) || `.wide is ${Math.round(rect('.wide').width)}px wide (use span 2)`; } },
+        { label: 'full-width banner with -1', mistake: '.banner { grid-column: 1 / -1; }: 1 / 5 breaks when the column count changes.', check: ({ document, rect, h }) => { const end = h.declared(document.querySelector('style[data-source="learner"]').sheet, '.banner', 'grid-column-end'); return (Math.round(rect('.banner').width) === 440 && end === '-1') || (end !== '-1' ? `grid-column-end is ${end || 'not set'}; use -1` : 'the banner is not full width'); } },
+        { label: 'hole backfilled', mistake: '.gallery { grid-auto-flow: row dense; } moves f into row 3, column 4.', check: ({ $, rect }) => { const g = rect('.gallery'); const f = rect('.last'); const at = [Math.round(f.left - g.left), Math.round(f.top - g.top)]; return (/dense/.test(getComputedStyle($('.gallery')).gridAutoFlow) && at.join() === '336,216') || `f is at (${at.join(', ')}); the hole is at (336, 216)`; } },
+      ],
+    },
+    {
+      id: 'css-grid-areas',
+      title: 'Named areas and alignment inside cells',
+      source: 'HTML & CSS course, Part 25',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<div class="app"><header class="app-header">ToyShop admin</header><nav class="app-sidebar">Orders · Products</nav><main class="app-main">Dashboard</main><footer class="app-footer">© 2026</footer></div>\n<div class="board"><div class="tile">₹42k</div><div class="tile">128</div><div class="tile pinned">!</div></div>',
+        css: 'body { margin: 0; font: 16px/1.4 Arial, sans-serif; }\n.app { width: 800px; height: 400px; }\n.app-header, .app-footer { background: #1e293b; color: white; }\n.app-sidebar { background: #f1f5f9; }\n.app-main { background: #fff; }\n.board { display: grid; grid-template-columns: repeat(3, 120px); grid-auto-rows: 120px; gap: 8px; width: 600px; margin-top: 16px; background: #f1f5f9; }\n.tile { padding: 8px; background: #fde68a; }',
+      },
+      teach: [
+        { h: 'Draw the layout in CSS' },
+        { code: '.page {\n  display: grid;\n  grid-template-columns: 220px 1fr;\n  grid-template-rows: auto 1fr auto;\n  grid-template-areas:\n    "header  header"\n    "sidebar main"\n    "footer  footer";\n}\n.page-header { grid-area: header; }\n.page-nav    { grid-area: sidebar; }\n.page-main   { grid-area: main; }\n.page-footer { grid-area: footer; }', lang: 'css' },
+        { list: ['Each quoted string is one row; each word is one cell. Repeating a name merges cells into one area.', 'Areas must be **rectangles**; an L shape makes the whole declaration invalid.', '`.` marks an empty cell.', 'Rearranging the page for mobile means rewriting only the template, often inside one media query.'] },
+        { h: 'Alignment' },
+        { table: { head: ['Property', 'Aligns'], rows: [['`justify-items` / `align-items`', 'every item inside **its own cell** (horizontal / vertical); default `stretch`'], ['`place-items: center`', 'shorthand for both'], ['`justify-self` / `align-self` / `place-self`', 'one item inside its cell'], ['`justify-content` / `align-content`', 'the **whole grid** inside the container, when the tracks are smaller than it']] } },
+      ],
+      example: [
+        { code: '.dashboard {\n  display: grid;\n  grid-template-columns: 240px 1fr;\n  grid-template-rows: 64px 1fr;\n  grid-template-areas:\n    "sidebar topbar"\n    "sidebar main";\n  height: 100vh;\n}\n.main { grid-area: main; overflow: auto; }', lang: 'css' },
+      ],
+      task: [
+        { ol: ['`.app`: with `grid-template-areas`, a 60px header across the top, a 200px sidebar on the left, the main area filling the rest, and a 40px footer across the bottom. Name the areas `header`, `sidebar`, `main`, `footer` and assign each child with `grid-area`.', '`.board`: centre every tile inside its cell, and centre the whole 376px grid horizontally in the 600px board.', '`.pinned`: only this tile sits in the **top-right** corner of its cell.'] },
+      ],
+      starter: '.app {\n  display: grid;\n  grid-template-columns: 200px 1fr;\n}\n',
+      solution: '.app {\n  display: grid;\n  grid-template-columns: 200px 1fr;\n  grid-template-rows: 60px 1fr 40px;\n  grid-template-areas:\n    "header header"\n    "sidebar main"\n    "footer footer";\n}\n\n.app-header { grid-area: header; }\n.app-sidebar { grid-area: sidebar; }\n.app-main { grid-area: main; }\n.app-footer { grid-area: footer; }\n\n.board {\n  place-items: center;\n  justify-content: center;\n}\n\n.pinned {\n  justify-self: end;\n  align-self: start;\n}\n',
+      checks: [
+        { label: 'template areas drawn', mistake: 'grid-template-areas: "header header" "sidebar main" "footer footer".', check: ({ $ }) => { const areas = getComputedStyle($('.app')).gridTemplateAreas.replace(/\s+/g, ' ').trim(); return areas === '"header header" "sidebar main" "footer footer"' || `grid-template-areas is ${areas}`; } },
+        { label: 'children assigned by name', mistake: 'grid-area: header / sidebar / main / footer on the four children.', check: ({ $ }) => { const pairs = [['.app-header', 'header'], ['.app-sidebar', 'sidebar'], ['.app-main', 'main'], ['.app-footer', 'footer']]; const wrong = pairs.filter(([s, n]) => getComputedStyle($(s)).gridRowStart !== n).map(([s]) => s); return wrong.length === 0 || `not assigned to their area: ${wrong.join(', ')}`; } },
+        { label: 'track sizes', mistake: 'grid-template-columns: 200px 1fr; grid-template-rows: 60px 1fr 40px.', check: ({ rect }) => { const app = rect('.app'); const hd = rect('.app-header'); const sb = rect('.app-sidebar'); const mn = rect('.app-main'); const ft = rect('.app-footer'); const ok = Math.round(hd.width) === 800 && Math.round(hd.height) === 60 && Math.round(sb.width) === 200 && Math.round(sb.height) === 300 && Math.round(mn.left - app.left) === 200 && Math.round(ft.width) === 800 && Math.round(ft.height) === 40 && Math.round(ft.bottom - app.top) === 400; return ok || `header ${Math.round(hd.width)}×${Math.round(hd.height)}, sidebar ${Math.round(sb.width)}×${Math.round(sb.height)}, footer ${Math.round(ft.width)}×${Math.round(ft.height)}`; } },
+        { label: 'tiles centred, grid centred', mistake: '.board { place-items: center; justify-content: center; }', check: ({ $$, rect }) => { const b = rect('.board'); const t = $$('.tile').map((x) => rect(x)); const cx = (r) => Math.round(r.left + r.width / 2 - b.left); const cy = (r) => Math.round(r.top + r.height / 2 - b.top); return (cx(t[0]) === 172 && cy(t[0]) === 60 && cx(t[1]) === 300 && cy(t[1]) === 60) || `first tile centre at (${cx(t[0])}, ${cy(t[0])}); expected (172, 60)`; } },
+        { label: 'one tile in the top-right corner', mistake: '.pinned { justify-self: end; align-self: start; }', check: ({ rect }) => { const b = rect('.board'); const p = rect('.pinned'); return (Math.round(p.right - b.left) === 488 && Math.round(p.top - b.top) === 0) || `the pinned tile ends ${Math.round(p.right - b.left)}px from the left and ${Math.round(p.top - b.top)}px from the top`; } },
+      ],
+    },
+    {
+      id: 'css-grid-quiz',
+      title: 'Grid or Flexbox?',
+      source: 'HTML & CSS course, Part 25',
+      runner: 'quiz',
+      teach: [
+        { table: { head: ['', 'Flexbox', 'Grid'], rows: [['Dimensions', 'one (a row or a column)', 'two (rows and columns together)'], ['Driven by', 'content size, adjusted by flex properties', 'tracks defined on the container'], ['Named regions', 'no', '`grid-template-areas`'], ['Typical use', 'inside components: navbars, toolbars, card internals', 'page shells, dashboards, card and photo grids']] } },
+        'It is rarely "pick one": a Grid page shell containing Flexbox navbars and cards is the standard structure, and the capstone later in the course is built exactly that way.',
+      ],
+      example: [
+        { code: '.page   { display: grid; grid-template-columns: 240px 1fr; }  /* macro layout */\n.navbar { display: flex; justify-content: space-between; }      /* micro layout */', lang: 'css' },
+      ],
+      task: ['Answer every question.'],
+      questions: [
+        { q: 'A 3-column grid has how many column lines?', options: ['2', '3', '4', 'It depends on the gap'], answer: 2, explain: 'Always one more line than tracks, numbered from 1.' },
+        { q: 'Only 2 product cards are in a wide `repeat(auto-fill, minmax(200px, 1fr))` grid. What do you see?', options: ['Two cards filling the row', 'Two cards near 200px with empty space beside them', 'An error', 'One card per row'], answer: 1, explain: 'auto-fill keeps the empty tracks. auto-fit would collapse them and stretch the cards.' },
+        { q: 'Why can `grid-template-columns: 1fr 1fr` produce unequal columns?', options: ['fr is rounded', '1fr is minmax(auto, 1fr), so a column will not shrink below its content\'s minimum width', 'gap is added to one column', 'It cannot'], answer: 1, explain: 'Use minmax(0, 1fr) for strictly equal columns.' },
+        { q: 'What makes an item span the full width without knowing the column count?', options: ['grid-column: span all', 'grid-column: 1 / -1', 'width: 100%', 'grid-column: 1 / 99'], answer: 1, explain: '-1 is always the last line.' },
+        { q: 'A grid defines 3 columns and has 10 items. What sizes the extra rows?', options: ['grid-template-rows', 'grid-auto-rows', 'They are not shown', 'grid-auto-columns'], answer: 1, explain: 'Rows created for overflow items are implicit; grid-auto-rows sizes them (content-sized by default).' },
+        { q: 'Which is a better fit for Flexbox than Grid?', options: ['A page with header, sidebar, main and footer', 'A photo gallery that must line up in rows and columns', 'A row of buttons in a toolbar', 'A dashboard of KPI tiles'], answer: 2, explain: 'One direction, content-sized items: Flexbox.' },
+        { q: 'What is wrong with this template?', options: ['Nothing', 'The "side" area is not a rectangle, so the whole declaration is invalid', 'Names must be one letter', 'It needs grid-template-columns first'], answer: 1, explain: 'Every named area must form a rectangle.', code: 'grid-template-areas:\n  "side main"\n  "side side";', lang: 'css' },
+      ],
+    },
+  ],
+};
