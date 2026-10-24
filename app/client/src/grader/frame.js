@@ -11,7 +11,9 @@ const LOAD_TIME_LIMIT_MS = 15000;
 export function runInFrame(job) {
   return new Promise((resolve) => {
     const iframe = document.createElement('iframe');
-    iframe.setAttribute('sandbox', 'allow-scripts');
+    // allow-forms: without it the browser never fires `submit`, so form
+    // lessons could not be tested. The sandbox stops every real submission.
+    iframe.setAttribute('sandbox', 'allow-scripts allow-forms');
     iframe.setAttribute('aria-hidden', 'true');
     iframe.tabIndex = -1;
     iframe.title = 'Code sandbox';

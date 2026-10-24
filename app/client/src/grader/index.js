@@ -4,7 +4,7 @@ import { checkMarkup } from './markup.js';
 import { runInFrame } from './frame.js';
 import { describeError } from './values.js';
 
-export const JS_TIME_LIMIT_MS = 2000;
+export const JS_TIME_LIMIT_MS = 4000;
 
 export async function gradeLesson(lesson, code) {
   let outcome;

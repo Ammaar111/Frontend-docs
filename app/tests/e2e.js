@@ -98,7 +98,7 @@ async function main() {
     await page.goto(`${BASE}/lesson/${jsLesson.id}`);
     await setEditor(page, 'while (true) {}');
     const loop = await runAndRead(page);
-    check(loop.score === '0' && /more than 2 seconds/.test(loop.mistakes.join(' ')), `worker infinite loop: ${loop.mistakes.join(' | ')}`);
+    check(loop.score === '0' && /more than \d+ seconds/.test(loop.mistakes.join(' ')), `worker infinite loop: ${loop.mistakes.join(' | ')}`);
 
     // An infinite loop in a page lesson is stopped by the loop guard.
     const pageLesson = course.find(({ lesson }) => lesson.runner === 'page' && lesson.slot === 'js')?.lesson;

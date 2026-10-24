@@ -297,7 +297,7 @@ function lessonView(q, row) {
 function publicConfig(row) {
   const config = JSON.parse(row.config);
   if (config.questions) {
-    config.questions = config.questions.map(({ q: question, options, code }) => ({ q: question, options, code }));
+    config.questions = config.questions.map(({ q: question, options, code, lang }) => ({ q: question, options, code, lang }));
   }
   return config;
 }

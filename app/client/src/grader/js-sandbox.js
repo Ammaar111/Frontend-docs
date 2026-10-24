@@ -12,8 +12,12 @@ import { deepEqual, describe, describeError, recordingConsole } from './values.j
 import { syntaxProblem } from './syntax.js';
 
 const AsyncFunction = (async () => {}).constructor;
+export const CHECK_LIMIT_MS = 1000;
 
-export async function runJsTests(code, checks, config = {}) {
+// `uncaught` collects errors thrown later, inside timers or promise
+// callbacks. The worker fills it from its global error handler, so a
+// failed check can say what went wrong.
+export async function runJsTests(code, checks, config = {}, { uncaught = [] } = {}) {
   const problem = syntaxProblem(code);
   if (problem) return { fatal: problem };
 
@@ -36,16 +40,36 @@ export async function runJsTests(code, checks, config = {}) {
 
   const results = [];
   for (let i = 0; i < checks.length; i += 1) {
-    results.push(await runOne(thunks[i], checks[i]));
+    const before = uncaught.length;
+    const result = await runOne(thunks[i], checks[i]);
+    if (!result.pass && uncaught.length > before) {
+      result.detail = `${result.detail ? `${result.detail}; ` : ''}your code threw ${uncaught[uncaught.length - 1]} in a callback`;
+    }
+    results.push(result);
   }
   return { results, logs };
+}
+
+function withTimeout(promise) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        const err = new Error(`it did not finish within ${CHECK_LIMIT_MS / 1000} second (a promise that never resolves?)`);
+        err.name = 'Timeout';
+        reject(err);
+      }, CHECK_LIMIT_MS);
+    }),
+  ]).finally(() => clearTimeout(timer));
 }
 
 async function runOne(thunk, check) {
   let value;
   try {
-    value = await thunk();
+    value = await withTimeout(Promise.resolve().then(thunk));
   } catch (err) {
+    if (err?.name === 'Timeout') return { pass: false, detail: err.message };
     if (check.throws) return { pass: true, detail: '' };
     return { pass: false, detail: `it threw ${describeError(err)}` };
   }

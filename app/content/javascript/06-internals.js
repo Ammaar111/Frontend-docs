@@ -1,0 +1,95 @@
+// JavaScript & React course, Part 5: how JavaScript works inside.
+export default {
+  id: 'js-internals',
+  title: 'Objects in depth: prototypes and classes',
+  lessons: [
+    {
+      id: 'js-prototypes',
+      title: 'Constructors, new and the prototype chain',
+      source: 'JavaScript & React course, Part 5.4',
+      runner: 'js',
+      teach: [
+        'Every object has a hidden link to another object, its **prototype**. When you read a property the object does not have, JavaScript looks on the prototype, then the prototype\'s prototype, and so on: the **prototype chain**. This is how all arrays share `.map` from `Array.prototype` without each array carrying its own copy.',
+        { code: 'const animal = { makeSound() { return "Some generic sound"; } };\nconst dog = Object.create(animal);   // dog\'s prototype is animal\ndog.bark = () => "Woof!";\ndog.bark();      // own property\ndog.makeSound(); // found on the prototype' },
+        { h: 'Constructor functions and new' },
+        'Before `class`, objects were built with a constructor function called with `new`. `new Person("Ammaar", 17)` does four things:',
+        { ol: ['creates an empty object `{}`', 'links its prototype to `Person.prototype`', 'calls `Person` with `this` set to the new object', 'returns that object (unless the function returns its own object)'] },
+        { code: 'function Person(name, age) {\n  this.name = name;\n  this.age = age;\n}\nPerson.prototype.greet = function () {\n  return `Hi, I\'m ${this.name}`;\n};\nconst ammaar = new Person("Ammaar", 17);\nammaar.greet(); // found on Person.prototype' },
+        'Methods go on the **prototype**, so every instance shares one copy. Data goes on `this`, so each instance has its own.',
+        { warn: 'Calling a constructor without `new`: `Person("Ammaar")` runs as a plain function, `this` is `undefined` in strict mode, and you get a TypeError instead of an object.' },
+      ],
+      example: [
+        { code: 'function Counter(start) {\n  this.count = start;\n}\nCounter.prototype.increment = function () {\n  this.count++;\n  return this.count;\n};\n\nconst a = new Counter(0);\nconst b = new Counter(10);\nconsole.log(a.increment(), b.increment());           // 1 11\nconsole.log(a.increment === b.increment);           // true: one shared method\nconsole.log(Object.getPrototypeOf(a) === Counter.prototype); // true' },
+      ],
+      task: [
+        { ol: ['Write a constructor function `Product(name, price)` that stores both on `this`.', 'Add a method `priceWithTax(rate)` on `Product.prototype` that returns `price + price * rate`.', 'Create `const pen = new Product("Pen", 20);`.', 'Create `const guestUser` with `Object.create(baseUser)` (given) and give it its own `name: "Guest"`. It should still get `describe()` from `baseUser`.'] },
+      ],
+      starter: 'const baseUser = {\n  describe() {\n    return `User: ${this.name}`;\n  },\n};\n\n// function Product(name, price) { ... }\n\n// Product.prototype.priceWithTax = ...\n\n// const pen = ...\n\n// const guestUser = ...\n',
+      solution: 'const baseUser = {\n  describe() {\n    return `User: ${this.name}`;\n  },\n};\n\nfunction Product(name, price) {\n  this.name = name;\n  this.price = price;\n}\n\nProduct.prototype.priceWithTax = function (rate) {\n  return this.price + this.price * rate;\n};\n\nconst pen = new Product("Pen", 20);\n\nconst guestUser = Object.create(baseUser);\nguestUser.name = "Guest";\n',
+      checks: [
+        { label: 'Product stores name and price', expr: '(() => { const p = new Product("Book", 300); return [p.name, p.price]; })()', expect: ['Book', 300], mistake: 'new Product("Book", 300) should have name "Book" and price 300, set with `this.name = name`.' },
+        { label: 'priceWithTax', expr: 'new Product("Book", 300).priceWithTax(0.1)', expect: 330, mistake: 'priceWithTax(0.1) on a ₹300 product should be 330.' },
+        { label: 'the method is shared on the prototype', expr: '(() => { const a = new Product("a", 1); return Object.prototype.hasOwnProperty.call(a, "priceWithTax") === false && typeof Product.prototype.priceWithTax === "function"; })()', expect: true, mistake: 'Put priceWithTax on Product.prototype, not on each instance.' },
+        { label: 'pen', expr: '[pen instanceof Product, pen.name, pen.priceWithTax(0.5)]', expect: [true, 'Pen', 30], mistake: 'Declare `const pen = new Product("Pen", 20);`.' },
+        { label: 'guestUser inherits describe', expr: '[guestUser.describe(), Object.getPrototypeOf(guestUser) === baseUser, Object.prototype.hasOwnProperty.call(guestUser, "describe")]', expect: ['User: Guest', true, false], mistake: 'guestUser should be created with Object.create(baseUser), have its own name "Guest", and get describe() through the prototype.' },
+      ],
+    },
+    {
+      id: 'js-classes',
+      title: 'Classes: extends, super, static, private fields and getters',
+      source: 'JavaScript & React course, Part 5.4–5.5',
+      runner: 'js',
+      teach: [
+        '`class` is readable syntax over the same prototype system: the `constructor` sets up instance data, and methods written in the class body go on the prototype.',
+        { code: 'class Person {\n  constructor(name, age) {\n    this.name = name;\n    this.age = age;\n  }\n  greet() {\n    return `Hi, I\'m ${this.name}, age ${this.age}`;\n  }\n}' },
+        { h: 'extends and super' },
+        'A subclass `extends` a parent. If it has a constructor, it **must call `super(...)` before using `this`**, so the parent sets up its part of the object first. `super.method()` calls the parent\'s version of a method.',
+        { h: 'static, private and getters' },
+        { list: ['`static square(n)` lives on the class itself: `MathHelper.square(5)`, not on instances.', '`#balance` is a **private field**: reading it from outside the class is a syntax error. It is the class version of the closure privacy you saw earlier.', '`get area()` runs a function when you read `rect.area` like a property (no parentheses). `set area(v)` runs on assignment.'] },
+        { h: 'OOP and FP' },
+        'Object-oriented code bundles data with behaviour and often mutates state inside objects. Functional code favours pure functions and new values instead of mutation. React leans functional: components are functions, state updates are immutable. You will still write classes for custom errors and meet class components in older React code.',
+        { warn: 'Forgetting `super()` in a subclass constructor: `ReferenceError: Must call super constructor in derived class before accessing \'this\'`.' },
+      ],
+      example: [
+        { code: 'class Student extends Person {\n  constructor(name, age, school) {\n    super(name, age);\n    this.school = school;\n  }\n  greet() {\n    return `${super.greet()}. I study at ${this.school}`;\n  }\n}\n\nclass Rectangle {\n  constructor(width, height) { this.width = width; this.height = height; }\n  get area() { return this.width * this.height; }\n}\nconsole.log(new Rectangle(4, 5).area); // 20' },
+      ],
+      task: [
+        { ol: ['`class Person` with `constructor(name, age)` and `greet()` returning `"Hi, I\'m Ammaar, age 17"`.', '`class Student extends Person` adding `school`; its `greet()` returns the parent greeting plus `" from Mumbai School"`, e.g. `"Hi, I\'m Ammaar, age 17 from Mumbai School"`. Use `super`.', '`class MathHelper` with a `static square(n)`.', '`class BankAccount` with a private `#balance`, `constructor(initial)`, `deposit(amount)` (returns the new balance) and a getter `balance`.', '`class Rectangle` with `width`, `height` and a getter `area`.'] },
+      ],
+      starter: 'class Person {\n\n}\n\nclass Student extends Person {\n\n}\n\nclass MathHelper {\n\n}\n\nclass BankAccount {\n\n}\n\nclass Rectangle {\n\n}\n',
+      solution: 'class Person {\n  constructor(name, age) {\n    this.name = name;\n    this.age = age;\n  }\n\n  greet() {\n    return `Hi, I\'m ${this.name}, age ${this.age}`;\n  }\n}\n\nclass Student extends Person {\n  constructor(name, age, school) {\n    super(name, age);\n    this.school = school;\n  }\n\n  greet() {\n    return `${super.greet()} from ${this.school}`;\n  }\n}\n\nclass MathHelper {\n  static square(n) {\n    return n * n;\n  }\n}\n\nclass BankAccount {\n  #balance = 0;\n\n  constructor(initial) {\n    this.#balance = initial;\n  }\n\n  deposit(amount) {\n    this.#balance += amount;\n    return this.#balance;\n  }\n\n  get balance() {\n    return this.#balance;\n  }\n}\n\nclass Rectangle {\n  constructor(width, height) {\n    this.width = width;\n    this.height = height;\n  }\n\n  get area() {\n    return this.width * this.height;\n  }\n}\n',
+      checks: [
+        { label: 'Person.greet', expr: 'new Person("Ammaar", 17).greet()', expect: "Hi, I'm Ammaar, age 17", mistake: "new Person(\"Ammaar\", 17).greet() should return \"Hi, I'm Ammaar, age 17\"." },
+        { label: 'Student extends Person', expr: '(() => { const s = new Student("Ammaar", 17, "Mumbai School"); return [s instanceof Person, s.school, s.greet()]; })()', expect: [true, 'Mumbai School', "Hi, I'm Ammaar, age 17 from Mumbai School"], mistake: "Student should extend Person, call super(name, age), store school, and greet() should return the parent greeting + \" from Mumbai School\"." },
+        { label: 'Student.greet uses super', expr: '/super\\.greet\\s*\\(/.test(__source)', expect: true, mistake: 'In Student.greet, reuse the parent method with `super.greet()` instead of repeating its text.' },
+        { label: 'static square', expr: '[MathHelper.square(5), typeof new MathHelper().square]', expect: [25, 'undefined'], mistake: 'MathHelper.square(5) should be 25, declared with `static` so it is on the class, not on instances.' },
+        { label: 'BankAccount keeps a private balance', expr: '(() => { const acc = new BankAccount(1000); return [acc.deposit(500), acc.balance, Object.keys(acc).length, /#balance/.test(__source)]; })()', expect: [1500, 1500, 0, true], mistake: 'BankAccount should store the balance in a private `#balance` field (no public keys), return the new balance from deposit, and expose it with `get balance()`.' },
+        { label: 'Rectangle area getter', expr: '(() => { const r = new Rectangle(4, 5); const first = r.area; r.width = 10; return [first, r.area, typeof Object.getOwnPropertyDescriptor(Rectangle.prototype, "area")?.get]; })()', expect: [20, 50, 'function'], mistake: 'Rectangle should have `get area()` computed from width and height every time it is read.' },
+      ],
+    },
+    {
+      id: 'js-internals-quiz',
+      title: 'Internals check: stack, heap, garbage collection, prototypes',
+      source: 'JavaScript & React course, Part 5.1–5.5 and interview questions',
+      runner: 'quiz',
+      teach: [
+        { list: ['**Execution context**: created for each call; holds local variables, `this`, and a link to the outer environment. The links form the **scope chain**.', '**Stack**: fast, fixed-size, last-in-first-out memory for primitives and call frames. **Heap**: a large region for objects, arrays and functions. A variable holding an object holds a **reference** (an address) into the heap. That is why objects copy by reference.', '**Garbage collection** (mark-and-sweep): starting from roots (globals, the current call stack), everything reachable is marked; everything else is freed. A closure or an event listener that is never removed keeps its data reachable, which is how memory leaks happen.', '**Prototype chain**: property lookup walks from the object up its prototypes. `class`/`extends` is sugar over it.', '**Immutability**: when data is replaced instead of mutated, "did it change?" is a cheap reference check (`old !== next`). React relies on this.'] },
+      ],
+      example: [
+        { code: 'Stack                 Heap\n┌──────────────┐\n│ age = 17     │\n│ user → ●─────┼──────> { name: "Ammaar", age: 17 }\n│ copy → ●─────┼────────┘   (same object)\n└──────────────┘', lang: 'text' },
+      ],
+      task: ['Answer every question.'],
+      questions: [
+        { q: 'Why does `const b = a` copy a number, but share an object?', options: ['Numbers are faster', 'The variable holds the number itself, but only a reference to an object in the heap', 'Objects are always global', 'Because of const'], answer: 1, explain: 'Copying the variable copies what is stored in it: the value for primitives, the address for objects.' },
+        { q: 'Which value is freed by the garbage collector?', options: ['An object still referenced by a closure that can be called', 'A global variable', 'An object no variable or closure can reach any more', 'An object referenced by an active event listener'], answer: 2, explain: 'Mark-and-sweep frees only what is unreachable from the roots.' },
+        { q: 'Which is NOT one of the things `new Fn()` does?', options: ['Creates an empty object', 'Links its prototype to Fn.prototype', 'Copies every method onto the new object', 'Calls Fn with this set to the new object'], answer: 2, explain: 'Methods stay on the prototype and are shared; nothing is copied.' },
+        { q: 'What does this return?', code: 'const parent = { hello() { return "hi"; } };\nconst child = Object.create(parent);\nchild.hasOwnProperty("hello");', options: ['true', 'false', 'undefined', 'TypeError'], answer: 1, explain: 'hello is found through the prototype chain, but it is not child\'s own property.' },
+        { q: 'Why must a subclass constructor call `super()` before using `this`?', options: ['It is optional', 'The parent constructor has to initialize the object first', 'super() makes methods static', 'To avoid hoisting'], answer: 1, explain: 'Until the parent constructor runs, `this` does not exist in a derived class.' },
+        { q: 'How do you call a `static` method `create` of `class User`?', options: ['`new User().create()`', '`User.create()`', '`User.prototype.create()` only', '`create(User)`'], answer: 1, explain: 'Static methods live on the class itself.' },
+        { q: 'What happens with `account.#balance` outside the class?', options: ['Returns undefined', 'Returns the balance', 'SyntaxError', 'Returns null'], answer: 2, explain: 'Private fields cannot even be written outside the class body; the code does not parse.' },
+        { q: 'Why does immutable data make change detection cheap?', options: ['It uses less memory', 'A changed value is a new object, so comparing references (`!==`) is enough', 'Immutable objects cannot be compared', 'It avoids the call stack'], answer: 1, explain: 'With mutation the reference stays the same even though the contents changed, so you would have to compare every property.' },
+        { q: 'A long-running page keeps getting slower and uses more memory. Which is a likely cause?', options: ['Using const', 'Event listeners that are added again and again and never removed', 'Using classes', 'Using map instead of a for loop'], answer: 1, explain: 'Each listener and everything it closes over stays reachable, so it can never be collected.' },
+      ],
+    },
+  ],
+};
