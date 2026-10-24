@@ -93,8 +93,16 @@ export function installEnvironment(state) {
       event.preventDefault();
     }
   });
-  window.addEventListener('error', (event) => state.errors.push(describeError(event.error ?? event.message)));
-  window.addEventListener('unhandledrejection', (event) => state.errors.push(describeError(event.reason)));
+  // The learner's errors are reported in the evaluation, so they are
+  // recorded here and kept out of the console as "uncaught".
+  window.addEventListener('error', (event) => {
+    state.errors.push(describeError(event.error ?? event.message));
+    event.preventDefault();
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    state.errors.push(describeError(event.reason));
+    event.preventDefault();
+  });
 }
 
 export function createState() {
