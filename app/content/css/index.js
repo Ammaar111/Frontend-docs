@@ -8,10 +8,11 @@ import responsive from './07-responsive.js';
 import functionsVariables from './08-functions-variables.js';
 import motion from './09-motion.js';
 import navForms from './10-nav-forms.js';
+import architectureModern from './11-architecture-modern.js';
 
 export default {
   id: 'css',
   title: 'CSS',
   description: 'How pages look: selectors, the cascade, the box model, positioning, Flexbox, Grid, responsive design, animation and design systems.',
-  modules: [selectors, cascade, boxPosition, surfaces, flexbox, grid, responsive, functionsVariables, motion, navForms],
+  modules: [selectors, cascade, boxPosition, surfaces, flexbox, grid, responsive, functionsVariables, motion, navForms, architectureModern],
 };
