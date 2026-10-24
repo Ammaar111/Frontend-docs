@@ -14,10 +14,11 @@ import themingComponents from './13-theming-components.js';
 import layoutsDebugging from './14-layouts-debugging.js';
 import performancePrint from './15-performance-print.js';
 import projects from './16-projects.js';
+import capstone from './17-capstone.js';
 
 export default {
   id: 'css',
   title: 'CSS',
   description: 'How pages look: selectors, the cascade, the box model, positioning, Flexbox, Grid, responsive design, animation and design systems.',
-  modules: [selectors, cascade, boxPosition, surfaces, flexbox, grid, responsive, functionsVariables, motion, navForms, architectureModern, mediaOverlays, themingComponents, layoutsDebugging, performancePrint, projects],
+  modules: [selectors, cascade, boxPosition, surfaces, flexbox, grid, responsive, functionsVariables, motion, navForms, architectureModern, mediaOverlays, themingComponents, layoutsDebugging, performancePrint, projects, capstone],
 };
