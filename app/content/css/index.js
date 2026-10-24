@@ -10,10 +10,11 @@ import motion from './09-motion.js';
 import navForms from './10-nav-forms.js';
 import architectureModern from './11-architecture-modern.js';
 import mediaOverlays from './12-media-overlays.js';
+import themingComponents from './13-theming-components.js';
 
 export default {
   id: 'css',
   title: 'CSS',
   description: 'How pages look: selectors, the cascade, the box model, positioning, Flexbox, Grid, responsive design, animation and design systems.',
-  modules: [selectors, cascade, boxPosition, surfaces, flexbox, grid, responsive, functionsVariables, motion, navForms, architectureModern, mediaOverlays],
+  modules: [selectors, cascade, boxPosition, surfaces, flexbox, grid, responsive, functionsVariables, motion, navForms, architectureModern, mediaOverlays, themingComponents],
 };
