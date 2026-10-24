@@ -10,7 +10,7 @@
 //   network  true: reject with TypeError("Failed to fetch"), like a dropped connection
 //
 // The setup also exposes, to checks and to the page:
-//   __requests  every request made: { method, url, body, headers }
+//   __requests  every request made: { method, url, body, headers, aborted }
 //   __api       { offline, overrides, delays }: change behaviour mid-check
 export function mockApi(routes, { defaultDelay = 15 } = {}) {
   return `
@@ -43,10 +43,12 @@ function fetch(input, options = {}) {
   const url = String(input).replace(/^https?:\\/\\/[^/]+/, "");
   const method = String(options.method || "GET").toUpperCase();
   const headers = options.headers || {};
-  __requests.push({ method, url, body: options.body === undefined ? null : options.body, headers });
+  const record = { method, url, body: options.body === undefined ? null : options.body, headers, aborted: false };
+  __requests.push(record);
 
   return new Promise((resolve, reject) => {
     if (options.signal && options.signal.aborted) {
+      record.aborted = true;
       reject(__abortError());
       return;
     }
@@ -76,6 +78,7 @@ function fetch(input, options = {}) {
     if (options.signal) {
       options.signal.addEventListener("abort", () => {
         clearTimeout(timer);
+        record.aborted = true;
         reject(__abortError());
       });
     }

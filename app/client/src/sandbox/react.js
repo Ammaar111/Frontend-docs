@@ -159,13 +159,27 @@ export async function runReactJob(job) {
     });
     current = { root, container, crash: null };
     const mounted = current;
-    ReactDOM.flushSync(() => {
-      root.render(
-        React.createElement(Boundary, { onError: (error) => (mounted.crash ??= error) }, element),
-      );
-    });
+    const show = (next) =>
+      ReactDOM.flushSync(() => {
+        root.render(React.createElement(Boundary, { onError: (error) => (mounted.crash ??= error) }, next));
+      });
+    show(element);
     await settle();
-    return { container, ...domHelpers(() => container) };
+    return {
+      container,
+      ...domHelpers(() => container),
+      // Same root, new element: React updates instead of remounting, so
+      // effects see changed props and state survives.
+      async rerender(next) {
+        show(next);
+        await settle();
+      },
+      // Runs every effect cleanup, as when a component leaves the screen.
+      async unmount() {
+        if (current === mounted) unmount();
+        await settle();
+      },
+    };
   };
 
   // Mount once before the checks: a component that cannot render at all is
