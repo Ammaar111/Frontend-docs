@@ -6,10 +6,11 @@ import flexbox from './05-flexbox.js';
 import grid from './06-grid.js';
 import responsive from './07-responsive.js';
 import functionsVariables from './08-functions-variables.js';
+import motion from './09-motion.js';
 
 export default {
   id: 'css',
   title: 'CSS',
   description: 'How pages look: selectors, the cascade, the box model, positioning, Flexbox, Grid, responsive design, animation and design systems.',
-  modules: [selectors, cascade, boxPosition, surfaces, flexbox, grid, responsive, functionsVariables],
+  modules: [selectors, cascade, boxPosition, surfaces, flexbox, grid, responsive, functionsVariables, motion],
 };

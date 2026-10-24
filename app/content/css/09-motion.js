@@ -1,0 +1,140 @@
+// HTML & CSS course, Parts 30–32: transitions, transforms and animations.
+// Running transitions and animations are inspected with getAnimations().
+export default {
+  id: 'css-motion',
+  title: 'Transitions, transforms and animations',
+  lessons: [
+    {
+      id: 'css-transitions',
+      title: 'Transitions in both directions',
+      source: 'HTML & CSS course, Part 30',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<button class="button" type="button">Add to cart</button>\n<a class="link" href="#">Delivery details</a>\n<div class="toast">Saved</div>\n<button class="toggle" type="button" aria-expanded="false" aria-controls="faq">Return policy</button>\n<div class="panel" id="faq"><p>Unused toys can be returned within 30 days of delivery anywhere in Mumbai.</p></div>',
+        css: 'body { margin: 16px; font: 16px/1.4 Arial, sans-serif; }\n.button { background: #4f46e5; color: white; border: 0; padding: 12px 20px; }\n.link { color: #1d4ed8; }\n.toast { display: inline-block; padding: 8px 16px; background: #0f172a; color: white; }\n.panel p { margin: 0; padding: 8px 0; }',
+      },
+      teach: [
+        'A **transition** animates a property between its old and new value whenever it changes (a `:hover`, a class toggled by JavaScript), instead of snapping in one frame. Besides looking polished, it helps people see **what** changed.',
+        { code: 'transition-property: background-color;\ntransition-duration: 0.2s;          /* or 200ms */\ntransition-timing-function: ease;    /* the default */\ntransition-delay: 0s;\n\n/* shorthand, several at once */\ntransition: background-color 0.2s ease, transform 0.15s ease;', lang: 'css' },
+        'Name the properties you mean. `transition: all` animates things you did not intend (a colour that changes on theme switch, a `width` that changes on resize) and makes the browser watch every property.',
+        { h: 'Put it on the base state' },
+        'A `transition` applies when the element\'s **current** styles have it. Declared only in `.button:hover`, the change **into** hover animates, but on mouse-leave the base rule has no transition, so it snaps back. Declare it on the base rule and both directions animate.',
+        { h: 'Timing functions' },
+        { list: ['`ease` (default): slow, fast, slow; good for most UI.', '`ease-out`: fast start, gentle stop: things **arriving** (menus, toasts).', '`ease-in`: slow start, accelerating: things **leaving**.', '`linear`: constant speed: spinners and progress, rarely UI movement.', '`cubic-bezier(0.34, 1.56, 0.64, 1)`: custom curves; a y value above 1 overshoots for a small bounce. DevTools has a visual editor.'] },
+        { h: 'height: auto' },
+        'Transitions need two numbers, and `auto` is not one. The classic workaround is to animate `max-height` from 0 to a generous fixed value; its drawback is that the timing is computed for the full max-height, so short content opens unevenly. Newer browsers (Chromium 129+) support `interpolate-size: allow-keywords` to animate to `auto` directly; keep the max-height fallback for others.',
+      ],
+      example: [
+        { code: '.card {\n  transition: transform 0.25s ease, box-shadow 0.25s ease;\n}\n.card:hover {\n  transform: translateY(-4px);\n  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);\n}', lang: 'css' },
+      ],
+      task: [
+        { ol: ['`.button`: transitions `background-color` over `0.2s ease` and `transform` over `0.15s ease`, declared on the base rule. `:hover` changes the background to `#4338ca`; `:active` scales it to `0.97`.', '`.link`: transitions `color` in `150ms` with `ease-out`; on hover the colour becomes `#1e3a8a`.', '`.toast`: transitions `transform` over `0.3s` with the overshoot curve `cubic-bezier(0.34, 1.56, 0.64, 1)`.', '`.panel`: closed by default (`max-height: 0` with hidden overflow); `.panel.open` has `max-height: 500px`. `max-height` transitions over `0.3s ease` when opening **and** closing.'] },
+      ],
+      starter: '.button:hover {\n  background-color: #4338ca;\n  transition: all 0.2s;\n}\n\n.panel.open {\n  max-height: 500px;\n  transition: max-height 0.3s ease;\n}\n',
+      solution: '.button {\n  transition: background-color 0.2s ease, transform 0.15s ease;\n}\n\n.button:hover {\n  background-color: #4338ca;\n}\n\n.button:active {\n  transform: scale(0.97);\n}\n\n.link {\n  transition: color 150ms ease-out;\n}\n\n.link:hover {\n  color: #1e3a8a;\n}\n\n.toast {\n  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);\n}\n\n.panel {\n  max-height: 0;\n  overflow: hidden;\n  transition: max-height 0.3s ease;\n}\n\n.panel.open {\n  max-height: 500px;\n}\n',
+      checks: [
+        { label: 'button transitions on the base rule', mistake: '.button { transition: background-color 0.2s ease, transform 0.15s ease; } (not on :hover, and not "all").', check: ({ $ }) => { const s = getComputedStyle($('.button')); return (s.transitionProperty === 'background-color, transform' && s.transitionDuration === '0.2s, 0.15s' && /^ease, ease$/.test(s.transitionTimingFunction)) || `the base .button has transition-property "${s.transitionProperty}", duration "${s.transitionDuration}"`; } },
+        { label: 'hover and press states', mistake: '.button:hover { background-color: #4338ca; } and .button:active { transform: scale(0.97); }', check: ({ document, h }) => { const sheet = document.querySelector('style[data-source="learner"]').sheet; const hover = h.is(sheet, '.button:hover', 'background-color', '#4338ca'); const active = /scale\(0\.97\)/.test(h.declared(sheet, '.button:active', 'transform')); return (hover && active) || (hover ? 'no scale(0.97) on .button:active' : 'no #4338ca background on .button:hover'); } },
+        { label: 'link colour transition', mistake: '.link { transition: color 150ms ease-out; } and a #1e3a8a hover colour.', check: ({ document, $, h }) => { const s = getComputedStyle($('.link')); return (s.transitionProperty === 'color' && s.transitionDuration === '0.15s' && s.transitionTimingFunction === 'ease-out' && h.is(document.querySelector('style[data-source="learner"]').sheet, '.link:hover', 'color', '#1e3a8a')) || `link: ${s.transitionProperty} ${s.transitionDuration} ${s.transitionTimingFunction}`; } },
+        { label: 'overshoot curve', mistake: '.toast { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }', check: ({ $ }) => { const s = getComputedStyle($('.toast')); return (s.transitionProperty === 'transform' && s.transitionDuration === '0.3s' && s.transitionTimingFunction.replace(/\s/g, '') === 'cubic-bezier(0.34,1.56,0.64,1)') || `toast: ${s.transitionProperty} ${s.transitionDuration} ${s.transitionTimingFunction}`; } },
+        { label: 'panel animates open and closed', mistake: 'Put max-height: 0, overflow: hidden and the transition on .panel itself, so closing animates too.', check: async ({ $, wait }) => { const panel = $('.panel'); const closed = getComputedStyle(panel).maxHeight === '0px' && getComputedStyle(panel).overflowY === 'hidden'; const running = () => panel.getAnimations().some((a) => a.transitionProperty === 'max-height'); panel.classList.add('open'); await wait(30); const opens = running(); panel.getAnimations().forEach((a) => a.finish()); panel.classList.remove('open'); await wait(30); const closes = running(); panel.getAnimations().forEach((a) => a.finish()); return (closed && opens && closes) || (!closed ? 'the panel should start with max-height: 0 and hidden overflow' : `opening animates: ${opens}, closing animates: ${closes}`); } },
+      ],
+    },
+    {
+      id: 'css-transforms',
+      title: 'Transforms: translate, scale, rotate and origin',
+      source: 'HTML & CSS course, Part 31',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<div class="parent"><div class="child">Centred, any size</div></div>\n<div class="row"><span class="move">Moved</span><span class="neighbour">Neighbour</span></div>\n<div class="icon">➜</div>\n<div class="menu-wrap"><ul class="menu"><li>Profile</li><li>Orders</li><li>Sign out</li></ul></div>\n<span class="chip">New</span>',
+        css: 'body { margin: 16px; font: 16px/1.4 Arial, sans-serif; }\n.parent { position: relative; width: 300px; height: 200px; background: #f1f5f9; }\n.child { padding: 12px 20px; background: #fde68a; }\n.row { margin: 16px 0; }\n.move, .neighbour { display: inline-block; padding: 8px; background: #e0e7ff; }\n.icon { display: inline-block; width: 40px; height: 40px; text-align: center; }\n.menu { margin: 0; padding: 8px; list-style: none; background: white; border: 1px solid #cbd5e1; width: 160px; }\n.chip { display: inline-block; padding: 4px 10px; background: #34d399; border-radius: 999px; }',
+      },
+      teach: [
+        '`transform` moves, scales, rotates or skews an element **visually**. Its layout box stays where it was, so neighbours never move. Because of that, the browser can usually apply it at the **composite** step without recalculating layout or repainting, which is why `transform` and `opacity` are the properties to animate (Part 48).',
+        { code: 'transform: translate(20px, 10px);   /* translateX / translateY; % = of the element\'s OWN size */\ntransform: scale(1.1);              /* scaleX / scaleY; negative flips */\ntransform: rotate(45deg);           /* positive = clockwise */\ntransform: skew(10deg, 0);\ntransform: translateX(20px) rotate(10deg) scale(1.05);   /* applied in the order written */', lang: 'css' },
+        'Order matters: `rotate(90deg) translateX(50px)` moves the element **down**, because "x" now points down after the rotation. `translateX(50px) rotate(90deg)` moves it right, then spins it in place.',
+        { h: 'Centring anything with transform' },
+        { code: '.parent { position: relative; }\n.child {\n  position: absolute;\n  top: 50%;\n  left: 50%;                         /* top-left corner at the centre (% of the parent) */\n  transform: translate(-50%, -50%);  /* back by half its OWN width and height */\n}', lang: 'css' },
+        { h: 'transform-origin and individual properties' },
+        { list: ['`transform-origin` is the pivot for rotate and scale: `center` by default, `top left` makes a dropdown grow out of its corner.', 'Modern CSS has separate `translate`, `rotate` and `scale` properties. Each can be set, overridden and transitioned on its own: `.chip:hover { scale: 1.1; }` does not wipe out a `rotate` set elsewhere, whereas `transform: scale(1.1)` on hover would replace the whole transform list.'] },
+      ],
+      example: [
+        { code: '.dropdown {\n  transform-origin: top left;\n  transform: scale(0.95);\n  opacity: 0;\n  transition: transform 0.15s ease-out, opacity 0.15s ease-out;\n}\n.dropdown.open { transform: scale(1); opacity: 1; }', lang: 'css' },
+      ],
+      task: [
+        { ol: ['`.child`: centred in `.parent` with `position: absolute`, `top`/`left: 50%` and a translate.', '`.move`: 30px right and 15px up with one `transform`; `.neighbour` must not move.', '`.icon`: rotated 90deg clockwise **then** scaled to 1.5, in one `transform`.', '`.menu`: scales from its top-left corner: `transform-origin: top left`.', '`.chip`: tilted with the `rotate` property (`-3deg`); `.chip:hover` grows with the `scale` property (`1.1`) without touching `transform`.'] },
+      ],
+      starter: '.child {\n  margin: 50% auto;\n}\n\n.move {\n  position: relative;\n  left: 30px;\n  top: -15px;\n}\n\n.chip {\n  transform: rotate(-3deg);\n}\n\n.chip:hover {\n  transform: scale(1.1);\n}\n',
+      solution: '.child {\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n}\n\n.move {\n  transform: translate(30px, -15px);\n}\n\n.icon {\n  transform: rotate(90deg) scale(1.5);\n}\n\n.menu {\n  transform-origin: top left;\n}\n\n.chip {\n  rotate: -3deg;\n}\n\n.chip:hover {\n  scale: 1.1;\n}\n',
+      checks: [
+        { label: 'centred with absolute + translate', mistake: '.child { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }', check: ({ $, rect }) => { const p = rect('.parent'); const c = rect('.child'); const dx = Math.abs(p.left + p.width / 2 - (c.left + c.width / 2)); const dy = Math.abs(p.top + p.height / 2 - (c.top + c.height / 2)); const s = getComputedStyle($('.child')); return (s.position === 'absolute' && s.transform !== 'none' && dx < 1 && dy < 1) || `position ${s.position}, off centre by ${Math.round(dx)}px / ${Math.round(dy)}px`; } },
+        { label: 'moved visually only', mistake: '.move { transform: translate(30px, -15px); } (not position offsets).', check: ({ $ }) => { const m = new DOMMatrix(getComputedStyle($('.move')).transform); const s = getComputedStyle($('.move')); return (Math.round(m.e) === 30 && Math.round(m.f) === -15 && s.position === 'static') || `transform ${s.transform}, position ${s.position}`; } },
+        { label: 'rotate then scale', mistake: '.icon { transform: rotate(90deg) scale(1.5); }', check: ({ $ }) => { const t = getComputedStyle($('.icon')).transform; const m = new DOMMatrix(t === 'none' ? undefined : t); const near = (x, y) => Math.abs(x - y) < 0.001; return (near(m.a, 0) && near(m.b, 1.5) && near(m.c, -1.5) && near(m.d, 0)) || `icon transform is ${t}`; } },
+        { label: 'menu grows from its corner', mistake: '.menu { transform-origin: top left; }', check: ({ $ }) => getComputedStyle($('.menu')).transformOrigin === '0px 0px' || `transform-origin is ${getComputedStyle($('.menu')).transformOrigin}` },
+        { label: 'independent rotate and scale', mistake: '.chip { rotate: -3deg; } and .chip:hover { scale: 1.1; }: separate properties, so hover keeps the tilt.', check: ({ document, $, h }) => { const sheet = document.querySelector('style[data-source="learner"]').sheet; const tilt = getComputedStyle($('.chip')).rotate; const hoverScale = h.declared(sheet, '.chip:hover', 'scale'); const hoverTransform = h.declared(sheet, '.chip:hover', 'transform'); return (tilt === '-3deg' && hoverScale === '1.1' && !hoverTransform) || (hoverTransform ? 'transform on :hover replaces the whole transform: use the scale property' : `rotate is ${tilt}, hover scale is ${hoverScale || 'not set'}`); } },
+      ],
+    },
+    {
+      id: 'css-animations',
+      title: '@keyframes animations and reduced motion',
+      source: 'HTML & CSS course, Part 32',
+      runner: 'page',
+      slot: 'css',
+      fixture: {
+        html: '<div class="spinner" role="status" aria-label="Loading"></div>\n<div class="toast">Order placed</div>\n<span class="dot" aria-hidden="true"></span>\n<div class="skeleton"></div>',
+        css: 'body { margin: 16px; font: 16px/1.4 Arial, sans-serif; }\n.spinner { width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top-color: #4f46e5; border-radius: 50%; }\n.toast { opacity: 0; padding: 8px 16px; background: #0f172a; color: white; width: max-content; margin: 16px 0; }\n.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #dc2626; }\n.skeleton { height: 16px; width: 240px; margin-top: 16px; border-radius: 4px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 400px 100%; }',
+      },
+      teach: [
+        'Transitions go from A to B when something changes. **Animations** can have many steps, loop, and start on their own.',
+        { code: '@keyframes pulse {\n  0%, 100% { transform: scale(1); }\n  50%      { transform: scale(1.1); }\n}               /* from = 0%, to = 100% */\n\n.dot { animation: pulse 1.5s ease-in-out infinite; }', lang: 'css' },
+        { table: { head: ['Property', 'Values'], rows: [['`animation-name`', 'the @keyframes name'], ['`animation-duration` / `-delay`', 'first time in the shorthand is the duration, the second the delay'], ['`animation-timing-function`', 'as for transitions; `linear` for spinners'], ['`animation-iteration-count`', '`3`, `infinite`'], ['`animation-direction`', '`normal`, `reverse`, `alternate` (back and forth with the same keyframes)'], ['`animation-fill-mode`', '`none`, `forwards`, `backwards`, `both`'], ['`animation-play-state`', '`running`, `paused`']] } },
+        { h: 'fill-mode: why entrances "snap back"' },
+        { list: ['`none` (default): before the start and after the end, the element shows its **normal** styles.', '`forwards`: keeps the last keyframe after the end.', '`backwards`: shows the first keyframe during the delay.', '`both`: both.'] },
+        'So a toast whose base style is `opacity: 0` fades in and then **disappears** the moment the animation ends, unless it has `forwards` (or `both`).',
+        { h: 'prefers-reduced-motion is not optional' },
+        'Motion can cause dizziness and nausea for people with vestibular disorders, and operating systems let them ask for less ("Reduce motion"). Respect it for every significant movement, scale or loop:',
+        { code: '@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    animation-duration: 0.01ms !important;\n    animation-iteration-count: 1 !important;\n    transition-duration: 0.01ms !important;\n    scroll-behavior: auto !important;\n  }\n}', lang: 'css' },
+        'This keeps state changes (and `animationend` events) but removes the visible motion. Alternatively set `animation: none` on specific elements, making sure their final state is still correct without the animation.',
+      ],
+      example: [
+        { code: '@keyframes skeleton-shimmer {\n  from { background-position: -200px 0; }\n  to   { background-position: 200px 0; }\n}\n.skeleton { animation: skeleton-shimmer 1.5s ease-in-out infinite; }', lang: 'css' },
+      ],
+      task: [
+        { ol: ['`@keyframes spin` from `rotate(0deg)` to `rotate(360deg)`; `.spinner` runs it every `0.8s`, at constant speed, forever.', '`@keyframes fade-up` from `opacity: 0; transform: translateY(20px)` to `opacity: 1; transform: translateY(0)`; `.toast` plays it once over `0.4s ease-out` and **stays visible** afterwards (its base style is `opacity: 0`).', '`@keyframes pulse` scaling to `1.2`; `.dot` runs it over `1s ease-in-out`, forever, going back and forth with `alternate`.', 'Users who prefer reduced motion get no spinning, pulsing or fading-up movement. The toast must still end up visible for them.'] },
+      ],
+      starter: '@keyframes fade-up {\n  from { opacity: 0; transform: translateY(20px); }\n  to { opacity: 1; transform: translateY(0); }\n}\n\n.toast {\n  animation: fade-up 0.4s ease-out;\n}\n\n.spinner {\n  animation: spin 0.8s infinite;\n}\n',
+      solution: '@keyframes spin {\n  from { transform: rotate(0deg); }\n  to { transform: rotate(360deg); }\n}\n\n@keyframes fade-up {\n  from { opacity: 0; transform: translateY(20px); }\n  to { opacity: 1; transform: translateY(0); }\n}\n\n@keyframes pulse {\n  from { transform: scale(1); }\n  to { transform: scale(1.2); }\n}\n\n.spinner {\n  animation: spin 0.8s linear infinite;\n}\n\n.toast {\n  animation: fade-up 0.4s ease-out forwards;\n}\n\n.dot {\n  animation: pulse 1s ease-in-out infinite alternate;\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .spinner,\n  .dot {\n    animation: none;\n  }\n\n  .toast {\n    animation: none;\n    opacity: 1;\n  }\n}\n',
+      checks: [
+        { label: 'spin keyframes', mistake: '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }', check: ({ document, h }) => { const k = h.allRules(document.querySelector('style[data-source="learner"]').sheet, 'CSSKeyframesRule').find((r) => r.name === 'spin'); const end = k && (k.findRule('100%') || k.findRule('to')); return Boolean(end && /rotate\(360deg\)/.test(end.style.transform)) || 'no @keyframes spin ending at rotate(360deg)'; } },
+        { label: 'constant-speed infinite spinner', mistake: '.spinner { animation: spin 0.8s linear infinite; }: linear, because easing makes a spinner look like it stutters.', check: ({ $ }) => { const s = getComputedStyle($('.spinner')); return (s.animationName === 'spin' && s.animationDuration === '0.8s' && s.animationTimingFunction === 'linear' && s.animationIterationCount === 'infinite') || `spinner: ${s.animationName} ${s.animationDuration} ${s.animationTimingFunction} ${s.animationIterationCount}`; } },
+        { label: 'toast stays visible', mistake: '.toast { animation: fade-up 0.4s ease-out forwards; }: without forwards it returns to opacity 0 when the animation ends.', check: async ({ $, settle }) => { const toast = $('.toast'); const s = getComputedStyle(toast); if (s.animationName !== 'fade-up' || s.animationDuration !== '0.4s' || s.animationTimingFunction !== 'ease-out') return `toast: ${s.animationName} ${s.animationDuration} ${s.animationTimingFunction}`; toast.getAnimations().forEach((a) => a.finish()); await settle(); return getComputedStyle(toast).opacity === '1' || `after the animation the toast is back to opacity ${getComputedStyle(toast).opacity}`; } },
+        { label: 'pulse back and forth', mistake: '@keyframes pulse up to scale(1.2); .dot { animation: pulse 1s ease-in-out infinite alternate; }', check: ({ document, $, h }) => { const s = getComputedStyle($('.dot')); const k = h.allRules(document.querySelector('style[data-source="learner"]').sheet, 'CSSKeyframesRule').find((r) => r.name === 'pulse'); const big = k && [...k.cssRules].some((f) => /scale\(1\.2\)/.test(f.style.transform)); return (big && s.animationName === 'pulse' && s.animationDuration === '1s' && s.animationIterationCount === 'infinite' && s.animationDirection === 'alternate') || `dot: ${s.animationName} ${s.animationDuration} ${s.animationIterationCount} ${s.animationDirection}${big ? '' : ', and no scale(1.2) keyframe'}`; } },
+        { label: 'reduced motion respected', mistake: 'Inside @media (prefers-reduced-motion: reduce), stop the spinner, dot and toast animations (animation: none, or a near-zero duration), and keep the toast at opacity 1.', check: ({ document, $, h }) => { const rules = h.mediaRules(document.querySelector('style[data-source="learner"]').sheet, 'prefers-reduced-motion:reduce'); const calm = (sel) => rules.some((r) => $(sel).matches(r.selectorText) && (r.style.animationName === 'none' || /^0?\.0\d*m?s$|^0s$/.test(r.style.animationDuration))); const missing = ['.spinner', '.dot', '.toast'].filter((s) => !calm(s)); const toastShown = rules.some((r) => $('.toast').matches(r.selectorText) && (r.style.opacity === '1' || r.style.animationName !== 'none')); return (missing.length === 0 && toastShown) || (missing.length ? `still animated with reduced motion: ${missing.join(', ')}` : 'with animation: none the toast stays at opacity 0: also set opacity: 1'); } },
+      ],
+    },
+    {
+      id: 'css-motion-quiz',
+      title: 'Motion check',
+      source: 'HTML & CSS course, Parts 30–32',
+      runner: 'quiz',
+      teach: [
+        { table: { head: ['Need', 'Tool'], rows: [['A → B when state changes', '`transition` on the base rule'], ['Many steps, loops, starts by itself', '`@keyframes` + `animation`'], ['Move / scale / rotate cheaply', '`transform` (and `opacity`)'], ['Pivot point', '`transform-origin`'], ['Keep the end state', '`animation-fill-mode: forwards`'], ['People who get motion sick', '`@media (prefers-reduced-motion: reduce)`']] } },
+      ],
+      example: [
+        { code: '/* ❌ snaps back on mouse-leave */\n.btn:hover { background: navy; transition: background 0.2s; }\n\n/* ✅ animates both ways */\n.btn { transition: background 0.2s; }\n.btn:hover { background: navy; }', lang: 'css' },
+      ],
+      task: ['Answer every question.'],
+      questions: [
+        { q: 'A menu fades in smoothly on hover but disappears instantly when the mouse leaves. Why?', options: ['The duration is too short', 'The transition is declared only in the :hover rule', 'Hover cannot be animated', 'opacity cannot transition'], answer: 1, explain: 'On mouse-leave the base rule applies, and it has no transition.' },
+        { q: 'Which timing fits a dropdown arriving on screen?', options: ['ease-in', 'ease-out', 'linear', 'steps(1)'], answer: 1, explain: 'Fast start, gentle settle. ease-in suits things leaving.' },
+        { q: 'Why animate `transform: translateX()` rather than `left`?', options: ['left cannot be animated', 'transform skips layout (and usually paint), so it stays smooth', 'transform works without position', 'Both are equally fast'], answer: 1, explain: 'Changing left recalculates layout every frame.' },
+        { q: 'What does `transform: translate(-50%, -50%)` use as 100%?', options: ['The parent', 'The viewport', 'The element\'s own width and height', 'The font size'], answer: 2, explain: 'That is why it centres elements of unknown size.' },
+        { q: 'An entrance animation works, then the element vanishes at the end. Its base style is `opacity: 0`. Fix?', options: ['animation-fill-mode: forwards', 'animation-iteration-count: infinite', 'animation-direction: reverse', 'A longer duration'], answer: 0, explain: 'Without forwards the element returns to its normal (invisible) styles.' },
+        { q: 'Which result does `rotate(90deg) translateX(50px)` give?', options: ['Moves right 50px', 'Moves down 50px, because x points down after the rotation', 'No movement', 'It is invalid'], answer: 1, explain: 'Functions apply in order, each in the coordinate system left by the previous one.' },
+        { q: 'You cannot `transition: height` to `auto` in most browsers. What is the classic workaround?', options: ['transition: all', 'Animate max-height to a generous fixed value', 'Use display: none', 'Use z-index'], answer: 1, explain: 'Newer browsers also support interpolate-size: allow-keywords.' },
+      ],
+    },
+  ],
+};
