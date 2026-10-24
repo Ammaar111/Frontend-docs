@@ -3,10 +3,11 @@ import cascade from './02-cascade-color-units.js';
 import boxPosition from './03-box-display-position.js';
 import surfaces from './04-type-backgrounds-borders.js';
 import flexbox from './05-flexbox.js';
+import grid from './06-grid.js';
 
 export default {
   id: 'css',
   title: 'CSS',
   description: 'How pages look: selectors, the cascade, the box model, positioning, Flexbox, Grid, responsive design, animation and design systems.',
-  modules: [selectors, cascade, boxPosition, surfaces, flexbox],
+  modules: [selectors, cascade, boxPosition, surfaces, flexbox, grid],
 };
