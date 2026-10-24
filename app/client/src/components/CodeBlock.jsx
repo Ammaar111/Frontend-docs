@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { highlightCode, classHighlighter } from '@lezer/highlight';
-import { javascriptLanguage, jsxLanguage, typescriptLanguage } from '@codemirror/lang-javascript';
+import { javascriptLanguage, jsxLanguage, typescriptLanguage, tsxLanguage } from '@codemirror/lang-javascript';
 import { htmlLanguage } from '@codemirror/lang-html';
 import { cssLanguage } from '@codemirror/lang-css';
 
@@ -10,7 +10,7 @@ const PARSERS = {
   json: javascriptLanguage.parser,
   jsx: jsxLanguage.parser,
   ts: typescriptLanguage.parser,
-  tsx: typescriptLanguage.parser,
+  tsx: tsxLanguage.parser,
   html: htmlLanguage.parser,
   css: cssLanguage.parser,
 };
