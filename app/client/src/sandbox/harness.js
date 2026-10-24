@@ -127,6 +127,34 @@ export function addStyle(css, id) {
   return style;
 }
 
+// --- Viewport width for media-query checks.
+
+let normalWidth = null;
+
+export async function resizeViewport(width) {
+  normalWidth ??= window.innerWidth;
+  if (window.innerWidth !== width) {
+    await new Promise((resolve) => {
+      const finish = () => {
+        clearTimeout(timer);
+        window.removeEventListener('resize', onResize);
+        resolve();
+      };
+      const onResize = () => {
+        if (window.innerWidth === width) finish();
+      };
+      const timer = setTimeout(finish, 1500);
+      window.addEventListener('resize', onResize);
+      window.parent.postMessage({ type: 'resize', width }, '*');
+    });
+  }
+  await settle();
+}
+
+async function restoreViewport() {
+  if (normalWidth !== null && window.innerWidth !== normalWidth) await resizeViewport(normalWidth);
+}
+
 // --- Helpers that checks receive.
 
 export function domHelpers(scope = () => document) {
@@ -220,6 +248,21 @@ export function domHelpers(scope = () => document) {
       }
     },
     settle,
+    // Resizes the sandbox frame itself (the parent page does it on request),
+    // so media queries and vw units respond as they would on that screen.
+    // The frame goes back to its normal width after every check.
+    async atWidth(width) {
+      await resizeViewport(width);
+      return {
+        doc: document,
+        win: window,
+        width: document.documentElement.clientWidth,
+        $: (selector) => scope().querySelector(selector),
+        $$: (selector) => [...scope().querySelectorAll(selector)],
+        rect: (target) => find(target).getBoundingClientRect(),
+        style: (target, prop) => getComputedStyle(find(target)).getPropertyValue(prop).trim(),
+      };
+    },
     style: (target, prop) => getComputedStyle(find(target)).getPropertyValue(prop).trim(),
     rect: (target) => find(target).getBoundingClientRect(),
     h: helpers,
@@ -258,6 +301,7 @@ export async function runChecks(checks, prepare, { guard, state, crashed = () =>
     else if (!result.pass && !result.detail && state.errors.length > errorsBefore) {
       result.detail = `your code threw ${state.errors[state.errors.length - 1]}`;
     }
+    await restoreViewport();
     results.push(result);
   }
   return results;

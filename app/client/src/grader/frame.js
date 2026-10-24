@@ -42,6 +42,10 @@ export function runInFrame(job) {
         );
         // The iframe's origin is opaque, so '*' is the only target that reaches it.
         iframe.contentWindow.postMessage({ type: 'run', job }, '*');
+      } else if (event.data.type === 'resize') {
+        // A check asked to see the page at another viewport width.
+        const width = Math.min(Math.max(Math.round(Number(event.data.width)) || 1024, 200), 2400);
+        iframe.style.width = `${width}px`;
       } else if (event.data.type === 'result') {
         finish(event.data.outcome);
       }
