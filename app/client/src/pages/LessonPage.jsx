@@ -11,6 +11,7 @@ import Evaluation from '../components/Evaluation.jsx';
 import History from '../components/History.jsx';
 import QuizForm from '../components/QuizForm.jsx';
 import LessonSidebar from '../components/LessonSidebar.jsx';
+import Preview, { hasPreview } from '../components/Preview.jsx';
 import { ErrorMessage, Loading, RUNNER_LABEL, ScoreBadge } from '../components/Status.jsx';
 
 const DRAFT_DELAY_MS = 800;
@@ -221,6 +222,7 @@ function Lesson({ lesson }) {
                 labelId="code-heading"
                 describedBy="editor-help"
               />
+              {hasPreview(lesson) && <Preview lesson={lesson} code={code} />}
               <div className="actions">
                 <button type="button" className="button--primary" onClick={run} disabled={running}>
                   {running ? 'Running…' : 'Run and grade'}
